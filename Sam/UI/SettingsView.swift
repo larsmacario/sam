@@ -15,12 +15,26 @@ struct SettingsView: View {
 
     private var provider: LLMProvider { settings.selectedProvider }
 
+    private var inputModeSubtitle: String {
+        switch settings.inputMode {
+        case .dictation: return "Sprache → Text einfügen"
+        case .ai: return "Sprache → KI antwortet"
+        case .chat: return "Mehrturn-Dialog im Fenster"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
+            SettingsTabBar(selection: $tab)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if tab == .hauptseite { hauptseiteTab } else { einstellungenTab }
+                    switch tab {
+                    case .hauptseite: hauptseiteTab
+                    case .sprache: spracheTab
+                    case .ki: kiTab
+                    case .namen: namenTab
+                    }
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 12)
@@ -33,72 +47,41 @@ struct SettingsView: View {
         .glassPanel()
         .tint(SamDesign.accent)
         .onAppear {
-            tab = .hauptseite
             launchAtLoginService.refresh()
         }
         .onChange(of: tab) { _, newTab in
-            if newTab == .einstellungen { syncEinstellungenFields() }
+            if newTab == .ki { syncKiFields() }
         }
         .onChange(of: modelIDInput) { _, newValue in
             settings.setModelID(newValue, for: provider)
         }
     }
 
-    // MARK: - Kopf / Fuß
+    // MARK: - Kopf / Navigation
 
     private var header: some View {
         VStack(spacing: 0) {
             HStack {
-                if tab == .einstellungen {
-                    Button {
-                        withAnimation(.easeOut(duration: 0.2)) { tab = .hauptseite }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text("Zurück")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                        .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(GlassButtonStyle())
-                } else {
-                    Text("SAM")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-
+                Text(settings.assistantDisplayName)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
                 Spacer()
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        tab = tab == .hauptseite ? .einstellungen : .hauptseite
-                    }
-                } label: {
-                    Image(systemName: tab == .einstellungen ? "gearshape.fill" : "gearshape")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(tab == .einstellungen ? SamDesign.accent : Color.secondary)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(GlassButtonStyle())
-                .help("Einstellungen")
             }
             .padding(.horizontal, 16)
             .padding(.top, 2)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
 
             Group {
                 if tab == .hauptseite {
                     statusHeader
                 } else {
-                    Text("Einstellungen")
+                    Text(tab.title)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.primary)
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.bottom, 14)
+            .padding(.bottom, 10)
 
             if let error = appState.errorMessage, tab == .hauptseite {
                 Text(error)
@@ -131,7 +114,7 @@ struct SettingsView: View {
         HStack {
             HStack(spacing: 7) {
                 Image(systemName: "waveform.circle.fill")
-                Text("SAM 1.0")
+                Text("\(settings.assistantDisplayName) 1.0")
             }
             .font(.system(size: 12.5))
             .foregroundStyle(.tertiary)
@@ -155,9 +138,70 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Hauptseite
+    // MARK: - Start
 
     private var hauptseiteTab: some View {
+        Group {
+            SecLabel(title: "Allgemein", systemImage: "power")
+            SamGroup {
+                VStack(alignment: .leading, spacing: 8) {
+                    SamRow(last: true) {
+                        RowLabel(title: "Beim Anmelden starten", sub: launchAtLoginService.helperText)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { launchAtLoginService.isEnabled },
+                            set: { launchAtLoginService.setEnabled($0) }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                    }
+                    if let error = launchAtLoginService.errorText {
+                        Text(error)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 10)
+                    }
+                }
+            }
+
+            SecLabel(title: "Aktivierung", systemImage: "bolt.fill")
+            SamGroup {
+                SamRow(last: true) {
+                    RowLabel(title: "Aktiver Modus", sub: inputModeSubtitle)
+                    Spacer()
+                    Picker("", selection: Binding(get: { settings.inputMode }, set: { settings.inputMode = $0 })) {
+                        ForEach(InputMode.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    .labelsHidden().pickerStyle(.segmented).frame(width: 220)
+                }
+            }
+
+            SecLabel(title: "Tastenkürzel", systemImage: "command")
+            SamGroup {
+                shortcutRow(modifier: "Cmd", title: "Aufnehmen", desc: "Push-to-talk halten")
+                shortcutRow(modifier: "Option", title: "Modus wechseln", desc: "Diktat → KI → Chat", last: true)
+            }
+
+            SecLabel(title: "Berechtigungen", systemImage: "checkmark.shield")
+            SamGroup {
+                permissionRow("Bedienungshilfen", granted: appState.accessibilityGranted) {
+                    appState.requestAccessibilityPermission()
+                }
+                permissionRow("Mikrofon", granted: appState.microphoneGranted) {
+                    appState.requestMicrophonePermission()
+                }
+                permissionRow("Spracherkennung", granted: appState.speechGranted, last: true) {
+                    Task { _ = await SpeechTranscriber.requestPermission() }
+                }
+            }
+        }
+    }
+
+    // MARK: - Sprache
+
+    private var spracheTab: some View {
         Group {
             SecLabel(title: "Spracherkennung", systemImage: "waveform")
             SamGroup {
@@ -197,97 +241,12 @@ struct SettingsView: View {
                     .labelsHidden().pickerStyle(.menu).fixedSize()
                 }
             }
-
-            SecLabel(title: "Allgemein", systemImage: "power")
-            SamGroup {
-                VStack(alignment: .leading, spacing: 8) {
-                    SamRow(last: true) {
-                        RowLabel(title: "Beim Anmelden starten", sub: launchAtLoginService.helperText)
-                        Spacer()
-                        Toggle("", isOn: Binding(
-                            get: { launchAtLoginService.isEnabled },
-                            set: { launchAtLoginService.setEnabled($0) }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                    }
-                    if let error = launchAtLoginService.errorText {
-                        Text(error)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 10)
-                    }
-                }
-            }
-
-            SecLabel(title: "Aktivierung", systemImage: "bolt.fill")
-            SamGroup {
-                SamRow(last: true) {
-                    RowLabel(title: "Aktiver Modus", sub: settings.inputMode == .dictation ? "Sprache → Text einfügen" : "KI antwortet")
-                    Spacer()
-                    Picker("", selection: Binding(get: { settings.inputMode }, set: { settings.inputMode = $0 })) {
-                        ForEach(InputMode.allCases) { Text($0.displayName).tag($0) }
-                    }
-                    .labelsHidden().pickerStyle(.segmented).frame(width: 160)
-                }
-            }
-
-            SecLabel(title: "Tastenkürzel", systemImage: "command")
-            SamGroup {
-                shortcutRow(modifier: "Cmd", title: "Aufnehmen", desc: "Push-to-talk halten")
-                shortcutRow(modifier: "Option", title: "Modus wechseln", desc: "Diktat ↔ KI", last: true)
-            }
-
-            SecLabel(title: "Berechtigungen", systemImage: "checkmark.shield")
-            SamGroup {
-                permissionRow("Bedienungshilfen", granted: appState.accessibilityGranted) {
-                    appState.requestAccessibilityPermission()
-                }
-                permissionRow("Mikrofon", granted: appState.microphoneGranted) {
-                    appState.requestMicrophonePermission()
-                }
-                permissionRow("Spracherkennung", granted: appState.speechGranted, last: true) {
-                    Task { _ = await SpeechTranscriber.requestPermission() }
-                }
-            }
         }
     }
 
-    private func shortcutRow(modifier: String, title: String, desc: String, last: Bool = false) -> some View {
-        SamRow(last: last) {
-            HStack(spacing: 7) {
-                Keycap(text: "fn")
-                Text("+").font(.system(size: 13)).foregroundStyle(.tertiary)
-                Keycap(text: modifier)
-            }
-            Spacer()
-            HStack(spacing: 8) {
-                Text(title).font(.system(size: 14, weight: .medium)).foregroundStyle(.primary)
-                Text(desc).font(.system(size: 12.5)).foregroundStyle(.secondary)
-            }
-        }
-    }
+    // MARK: - KI
 
-    private func permissionRow(_ title: String, granted: Bool, last: Bool = false, action: @escaping () -> Void) -> some View {
-        SamRow(last: last) {
-            Text(title).font(.system(size: 14, weight: .medium)).foregroundStyle(.primary)
-            Spacer()
-            Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle")
-                .foregroundStyle(granted ? SamDesign.success : SamDesign.warning)
-            if !granted {
-                Button("Erlauben", action: action)
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(SamDesign.accent)
-            }
-        }
-    }
-
-    // MARK: - Einstellungen
-
-    private var einstellungenTab: some View {
+    private var kiTab: some View {
         Group {
             SecLabel(title: "KI-Anbieter", systemImage: "sparkles")
             SamGroup {
@@ -380,15 +339,116 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Namen
+
+    private var namenTab: some View {
+        Group {
+            SecLabel(title: "Eigennamen", systemImage: "person.text.rectangle")
+            Text("Assistentenname, dein Name, Aussprache, Firmenname – die KI nutzt diese Begriffe in Antworten.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 10)
+
+            if settings.properNames.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Noch keine Einträge.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                    nameSuggestionChips
+                }
+                .padding(.bottom, 12)
+            } else {
+                SamGroup {
+                    ForEach(Array(settings.properNames.enumerated()), id: \.element.id) { index, entry in
+                        ProperNameRow(
+                            entry: entry,
+                            isLast: index == settings.properNames.count - 1,
+                            onUpdate: { settings.updateProperName($0) },
+                            onDelete: { settings.removeProperName(id: $0) }
+                        )
+                    }
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    settings.addProperName()
+                } label: {
+                    Label("Eintrag hinzufügen", systemImage: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(SamDesign.accent)
+
+                if !settings.properNames.isEmpty {
+                    nameSuggestionChips
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private var nameSuggestionChips: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(ProperNameLabel.suggestions, id: \.self) { suggestion in
+                Button(suggestion) {
+                    let exists = settings.properNames.contains { ProperNameLabel.matches($0.label, suggestion) }
+                    if !exists {
+                        settings.addProperName(label: suggestion, value: "")
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(SamDesign.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(SamDesign.accent.opacity(0.12), in: Capsule())
+            }
+        }
+    }
+
+    // MARK: - Hilfszeilen
+
+    private func shortcutRow(modifier: String, title: String, desc: String, last: Bool = false) -> some View {
+        SamRow(last: last) {
+            HStack(spacing: 7) {
+                Keycap(text: "fn")
+                Text("+").font(.system(size: 13)).foregroundStyle(.tertiary)
+                Keycap(text: modifier)
+            }
+            Spacer()
+            HStack(spacing: 8) {
+                Text(title).font(.system(size: 14, weight: .medium)).foregroundStyle(.primary)
+                Text(desc).font(.system(size: 12.5)).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func permissionRow(_ title: String, granted: Bool, last: Bool = false, action: @escaping () -> Void) -> some View {
+        SamRow(last: last) {
+            Text(title).font(.system(size: 14, weight: .medium)).foregroundStyle(.primary)
+            Spacer()
+            Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle")
+                .foregroundStyle(granted ? SamDesign.success : SamDesign.warning)
+            if !granted {
+                Button("Erlauben", action: action)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(SamDesign.accent)
+            }
+        }
+    }
+
     // MARK: - Aktionen
 
     private func resetTransient() {
-        syncEinstellungenFields()
+        syncKiFields()
         saveMessage = nil
         testMessage = nil
     }
 
-    private func syncEinstellungenFields() {
+    private func syncKiFields() {
         modelIDInput = settings.modelID(for: provider)
         apiKeyInput = ""
     }
@@ -416,5 +476,116 @@ struct SettingsView: View {
             testMessage = error.localizedDescription
             testIsError = true
         }
+    }
+}
+
+// MARK: - Eigenname-Zeile
+
+private struct ProperNameRow: View {
+    let entry: ProperNameEntry
+    var isLast: Bool
+    var onUpdate: (ProperNameEntry) -> Void
+    var onDelete: (UUID) -> Void
+
+    @State private var label: String = ""
+    @State private var value: String = ""
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Bezeichnung")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(role: .destructive) {
+                        onDelete(entry.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red.opacity(0.85))
+                }
+                TextField("z. B. Assistentenname", text: $label)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 13))
+                    .onChange(of: label) { _, newValue in
+                        var updated = entry
+                        updated.label = newValue
+                        onUpdate(updated)
+                    }
+                TextField("Wert", text: $value)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 13))
+                    .onChange(of: value) { _, newValue in
+                        var updated = entry
+                        updated.value = newValue
+                        onUpdate(updated)
+                    }
+            }
+            .padding(14)
+
+            if !isLast {
+                Rectangle()
+                    .fill(Color.white.opacity(SamDesign.hairlineOpacity))
+                    .frame(height: 0.5)
+                    .padding(.leading, 14)
+            }
+        }
+        .onAppear {
+            label = entry.label
+            value = entry.value
+        }
+        .onChange(of: entry.label) { _, newValue in
+            if label != newValue { label = newValue }
+        }
+        .onChange(of: entry.value) { _, newValue in
+            if value != newValue { value = newValue }
+        }
+    }
+}
+
+/// Einfaches Zeilenumbruch-Layout für Vorschlags-Chips.
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = arrange(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = arrange(proposal: proposal, subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var maxX: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth, x > 0 {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: x, y: y))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+            maxX = max(maxX, x - spacing)
+        }
+
+        return (CGSize(width: maxX, height: y + rowHeight), positions)
     }
 }

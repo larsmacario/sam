@@ -30,10 +30,14 @@ final class OutputRouter {
     func route(_ action: LLMOutputAction) async throws {
         switch action {
         case .insertText(let text):
-            try await insertText(text)
+            try await pasteText(text)
         case .showAnswer(let text):
             overlay.showAnswer(text)
         }
+    }
+
+    func pasteText(_ text: String) async throws {
+        try await insertText(text)
     }
 
     private func insertText(_ text: String) async throws {

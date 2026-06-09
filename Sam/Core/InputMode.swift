@@ -6,6 +6,8 @@ enum InputMode: String, CaseIterable, Identifiable, Sendable {
     case dictation
     /// Sprache → KI → Antwort (KI entscheidet einfügen vs. Fenster).
     case ai
+    /// Sprache oder Text → Mehrturn-Dialog im Chat-Fenster.
+    case chat
 
     var id: String { rawValue }
 
@@ -13,6 +15,7 @@ enum InputMode: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dictation: return "Diktat"
         case .ai: return "KI"
+        case .chat: return "Chat"
         }
     }
 
@@ -21,10 +24,15 @@ enum InputMode: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dictation: return "text.cursor"
         case .ai: return "sparkles"
+        case .chat: return "bubble.left.and.bubble.right"
         }
     }
 
     func toggled() -> InputMode {
-        self == .dictation ? .ai : .dictation
+        switch self {
+        case .dictation: return .ai
+        case .ai: return .chat
+        case .chat: return .dictation
+        }
     }
 }

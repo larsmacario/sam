@@ -28,10 +28,11 @@ final class ClaudeClient: LLMProviding {
         context: SessionContext,
         modelID: String
     ) async throws -> LLMOutputAction {
+        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
         let body = MessagesRequest(
             model: modelID,
             max_tokens: 4096,
-            system: SamTools.systemPrompt,
+            system: systemPrompt,
             tools: [
                 ToolDefinition(
                     name: SamTools.insertTextName,
@@ -69,6 +70,29 @@ final class ClaudeClient: LLMProviding {
         }
 
         throw LLMError.noToolUse
+    }
+
+    func sendChat(
+        messages: [SamChatMessage],
+        initialContext: SessionContext?,
+        modelID: String
+    ) async throws -> String {
+        let payload = SamChat.apiMessages(from: messages, initialContext: initialContext)
+        let systemPrompt = await MainActor.run { SamChat.resolvedSystemPrompt() }
+        let body = MessagesRequest(
+            model: modelID,
+            max_tokens: 4096,
+            system: systemPrompt,
+            tools: nil,
+            tool_choice: nil,
+            messages: payload.map { Message(role: $0.role, content: $0.content) }
+        )
+
+        let response: MessagesResponse = try await send(body)
+        if let text = response.textContent, !text.isEmpty {
+            return text
+        }
+        throw LLMError.invalidResponse
     }
 
     private func send<T: Decodable>(_ body: MessagesRequest) async throws -> T {

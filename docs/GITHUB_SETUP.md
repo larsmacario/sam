@@ -20,7 +20,7 @@ Unter **Settings → General** oder auf der Repo-Startseite:
 
 - **Description:** `Voice-First KI-Assistent für macOS`
 - **Website:** Link zur README oder Releases-Seite
-- **Topics:** `macos`, `swift`, `swiftui`, `voice`, `dictation`, `whisper`, `claude`, `openai`, `gemini`
+- **Topics:** `macos`, `swift`, `swiftui`, `voice`, `dictation`, `whisper`, `claude`, `openai`, `gemini`, `menubar`, `assistant`
 
 ## Erstes Release
 

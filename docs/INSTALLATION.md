@@ -61,22 +61,45 @@ SAM startet im **Diktat-Modus**. Damit kannst du **ohne API-Key** sofort testen:
 3. Sprich deinen Text.
 4. Lasse die Tasten los → der Text wird eingefügt.
 
-**Modus wechseln:** **fn + ⌥** tippen (Fallback: **rechte ⌥**) wechselt zwischen Diktat und KI.
+**Modus wechseln:** **fn + ⌥** tippen (Fallback: **rechte ⌥**) rotiert durch Diktat, KI und Chat.
 
-## KI-Modus einrichten (optional)
+## Einstellungen
+
+Klicke auf das **SAM-Symbol** in der Menüleiste. Das Panel hat vier Tabs:
+
+| Tab | Wofür |
+|-----|-------|
+| **Start** | Autostart, aktiver Modus, Tastenkürzel, Berechtigungen |
+| **Sprache** | Spracherkennungs-Engine und Transkriptionssprache |
+| **KI** | Anbieter, Modell und API-Key |
+| **Namen** | Eigennamen für Personalisierung |
+
+## KI- und Chat-Modus einrichten (optional)
 
 Für Antworten von Claude, OpenAI oder Gemini:
 
-1. Klicke auf das **SAM-Symbol** in der Menüleiste (oben rechts).
-2. Öffne die **Einstellungen** (Zahnrad).
+1. Klicke auf das **SAM-Symbol** in der Menüleiste.
+2. Wechsle zum Tab **KI**.
 3. Wähle einen **Anbieter** und trage deinen **API-Key** ein.
-4. Klicke **Verbindung testen**.
+4. Klicke **Schlüssel testen**.
 
 API-Keys erhältst du bei den Anbietern:
 
 - Claude: [console.anthropic.com](https://console.anthropic.com/settings/keys)
 - OpenAI: [platform.openai.com](https://platform.openai.com/api-keys)
 - Gemini: [aistudio.google.com](https://aistudio.google.com/app/apikey)
+
+**Chat-Modus:** Mit **fn + ⌥** bis zum Chat-Modus wechseln, dann **fn + ⌘** zum Sprechen oder im Chat-Fenster tippen.
+
+## Eigennamen anpassen (optional)
+
+Unter Tab **Namen** kannst du beliebige Einträge mit Bezeichnung und Wert anlegen:
+
+- **Assistentenname** – Name in Chat- und Antwort-Fenstern (Standard: SAM)
+- **Dein Name** – wie die KI dich anspricht
+- Weitere z. B. **Firmenname**, **Aussprache**, **Projektname**
+
+Vorschläge erscheinen als Chips – ein Klick legt einen neuen Eintrag an. Beide Felder (Bezeichnung und Wert) müssen ausgefüllt sein, damit die KI den Eintrag nutzt.
 
 ## Hilfe
 

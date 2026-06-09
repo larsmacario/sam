@@ -138,13 +138,46 @@ final class AppState: ObservableObject {
     /// Wechselt den Eingabemodus (fn+option) und zeigt ihn klar sichtbar in der Pille.
     func toggleInputMode() {
         guard !isSessionActive else { return }
+        let previousMode = settings.inputMode
         settings.inputMode = settings.inputMode.toggled()
+        if previousMode == .chat {
+            ChatSessionController.shared.reset()
+        }
         overlay.flashMode(settings.inputMode)
         logger.info("Eingabemodus gewechselt: \(self.settings.inputMode.rawValue, privacy: .public)")
     }
 
+    func closeChatSession() {
+        ChatSessionController.shared.reset()
+    }
+
+    func sendChatText(_ text: String) async {
+        guard settings.inputMode == .chat else { return }
+        guard !ChatSessionController.shared.isProcessing else { return }
+
+        guard settings.isActiveProviderConfigured else {
+            errorMessage = AuthError.notConfigured.localizedDescription
+            status = .error
+            overlay.showAnswer("Bitte hinterlege zuerst einen API-Key für \(settings.selectedProvider.displayName) in den Einstellungen.")
+            return
+        }
+
+        status = .processing
+        do {
+            let context = ChatSessionController.shared.hasActiveSession ? nil : ContextProvider.shared.capture()
+            try await ChatSessionController.shared.send(text: text, context: context)
+            status = .idle
+        } catch {
+            errorMessage = error.localizedDescription
+            status = .error
+        }
+    }
+
     private func handleHotkeyPress() async {
         guard !isSessionActive else { return }
+        if settings.inputMode == .chat && ChatSessionController.shared.isProcessing {
+            return
+        }
         isSessionActive = true
         status = .listening
         errorMessage = nil
@@ -235,7 +268,6 @@ final class AppState: ObservableObject {
             return
         }
 
-        // KI-Modus: Transkript an die KI, die per Tool-Use über die Ausgabe entscheidet.
         guard settings.isActiveProviderConfigured else {
             errorMessage = AuthError.notConfigured.localizedDescription
             status = .error
@@ -243,6 +275,23 @@ final class AppState: ObservableObject {
             return
         }
 
+        // Chat-Modus: Mehrturn-Dialog im Chat-Fenster.
+        if settings.inputMode == .chat {
+            status = .processing
+            logger.info("Chat-Nachricht (Sprache): Länge=\(transcript.count)")
+            do {
+                let context = ChatSessionController.shared.hasActiveSession ? nil : ContextProvider.shared.capture()
+                try await ChatSessionController.shared.send(text: transcript, context: context)
+                status = .idle
+            } catch {
+                logger.error("Chat-Fehler: \(error.localizedDescription, privacy: .public)")
+                errorMessage = error.localizedDescription
+                status = .error
+            }
+            return
+        }
+
+        // KI-Modus: Transkript an die KI, die per Tool-Use über die Ausgabe entscheidet.
         status = .processing
         logger.info("KI-Anfrage an \(self.settings.selectedProvider.rawValue, privacy: .public) (\(self.settings.currentModelID, privacy: .public))…")
 

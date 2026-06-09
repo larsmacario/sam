@@ -29,8 +29,9 @@ final class GeminiClient: LLMProviding {
         context: SessionContext,
         modelID: String
     ) async throws -> LLMOutputAction {
+        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
         let body = GenerateRequest(
-            system_instruction: Content(role: nil, parts: [Part(text: SamTools.systemPrompt, functionCall: nil)]),
+            system_instruction: Content(role: nil, parts: [Part(text: systemPrompt, functionCall: nil)]),
             contents: [Content(role: "user", parts: [Part(text: SamTools.userContent(transcript: transcript, context: context), functionCall: nil)])],
             tools: [Tool(function_declarations: [
                 makeFunction(name: SamTools.insertTextName, description: SamTools.insertTextDescription, argDescription: "Der einzufügende Text"),
@@ -53,6 +54,34 @@ final class GeminiClient: LLMProviding {
         }
 
         throw LLMError.noToolUse
+    }
+
+    func sendChat(
+        messages: [SamChatMessage],
+        initialContext: SessionContext?,
+        modelID: String
+    ) async throws -> String {
+        let payload = SamChat.apiMessages(from: messages, initialContext: initialContext)
+        let contents = payload.map { entry in
+            Content(
+                role: entry.role == "user" ? "user" : "model",
+                parts: [Part(text: entry.content, functionCall: nil)]
+            )
+        }
+
+        let systemPrompt = await MainActor.run { SamChat.resolvedSystemPrompt() }
+        let body = GenerateRequest(
+            system_instruction: Content(role: nil, parts: [Part(text: systemPrompt, functionCall: nil)]),
+            contents: contents,
+            tools: nil,
+            tool_config: nil
+        )
+
+        let response: GenerateResponse = try await send(body, modelID: modelID)
+        if let text = response.firstText, !text.isEmpty {
+            return text
+        }
+        throw LLMError.invalidResponse
     }
 
     private func makeFunction(name: String, description: String, argDescription: String) -> FunctionDeclaration {

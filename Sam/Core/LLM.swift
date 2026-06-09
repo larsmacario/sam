@@ -68,6 +68,34 @@ struct LLMModel: Identifiable, Hashable, Sendable {
     let provider: LLMProvider
 }
 
+// MARK: - Chat-Nachrichten (Mehrturn-Dialog)
+
+enum SamChatRole: String, Sendable {
+    case user
+    case assistant
+
+    var apiRole: String {
+        switch self {
+        case .user: return "user"
+        case .assistant: return "assistant"
+        }
+    }
+}
+
+struct SamChatMessage: Identifiable, Sendable {
+    let id: UUID
+    let role: SamChatRole
+    let content: String
+    let timestamp: Date
+
+    init(id: UUID = UUID(), role: SamChatRole, content: String, timestamp: Date = Date()) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+    }
+}
+
 // MARK: - Ausgabe-Aktion (Intent-Routing, provider-unabhängig)
 
 enum LLMOutputAction: Sendable {
@@ -113,6 +141,13 @@ protocol LLMProviding: Sendable {
         context: SessionContext,
         modelID: String
     ) async throws -> LLMOutputAction
+
+    /// Mehrturn-Chat ohne Tool-Use (Chat-Modus).
+    func sendChat(
+        messages: [SamChatMessage],
+        initialContext: SessionContext?,
+        modelID: String
+    ) async throws -> String
 }
 
 // MARK: - Geteilte Prompt-/Tool-Definitionen
@@ -126,19 +161,47 @@ enum SamTools {
     static let showAnswerDescription = "Antwort im schwebenden Fenster anzeigen."
     static let textArgName = "text"
 
-    static let systemPrompt = """
-    Du bist SAM, ein persönlicher Voice-Assistent auf macOS.
-    Der Nutzer hat gesprochen und du erhältst das Transkript sowie optional Kontext.
+    static func systemPrompt(
+        assistantName: String = "SAM",
+        userName: String = "Der Nutzer",
+        properNames: [ProperNameEntry] = []
+    ) -> String {
+        var prompt = """
+        Du bist \(assistantName), ein persönlicher Voice-Assistent auf macOS.
+        \(userName) hat gesprochen und du erhältst das Transkript sowie optional Kontext.
 
-    Entscheide anhand der Nutzerabsicht:
-    - \(insertTextName): Wenn der Nutzer Text umschreiben, übersetzen, korrigieren, formatieren \
-    oder in ein Textfeld einfügen möchte. Beispiele: "Übersetze das", "Mache das formeller", \
-    "Korrigiere den Text".
-    - \(showAnswerName): Wenn der Nutzer eine Frage stellt oder eine Erklärung/Antwort erwartet, \
-    die nicht direkt eingefügt werden soll. Beispiele: "Was ist X?", "Erkläre mir Y".
+        Entscheide anhand der Nutzerabsicht:
+        - \(insertTextName): Wenn \(userName) Text umschreiben, übersetzen, korrigieren, formatieren \
+        oder in ein Textfeld einfügen möchte. Beispiele: "Übersetze das", "Mache das formeller", \
+        "Korrigiere den Text".
+        - \(showAnswerName): Wenn \(userName) eine Frage stellt oder eine Erklärung/Antwort erwartet, \
+        die nicht direkt eingefügt werden soll. Beispiele: "Was ist X?", "Erkläre mir Y".
 
-    Wähle genau ein Tool und liefere den fertigen Text darin.
-    """
+        Wähle genau ein Tool und liefere den fertigen Text darin.
+        """
+        if let block = properNamesPromptBlock(from: properNames) {
+            prompt += "\n\n\(block)"
+        }
+        return prompt
+    }
+
+    static func properNamesPromptBlock(from entries: [ProperNameEntry]) -> String? {
+        let lines = entries
+            .filter(\.isValid)
+            .map { "- \($0.trimmedLabel): \($0.trimmedValue)" }
+        guard !lines.isEmpty else { return nil }
+        return "Bekannte Eigennamen:\n" + lines.joined(separator: "\n")
+    }
+
+    @MainActor
+    static func resolvedSystemPrompt() -> String {
+        let settings = SettingsStore.shared
+        return systemPrompt(
+            assistantName: settings.assistantDisplayName,
+            userName: settings.userDisplayName,
+            properNames: settings.validProperNames
+        )
+    }
 
     /// Baut den User-Inhalt inkl. Kontext (App, markierter Text).
     static func userContent(transcript: String, context: SessionContext) -> String {
@@ -158,6 +221,45 @@ enum SamTools {
         case insertTextName: return .insertText(text)
         case showAnswerName: return .showAnswer(text)
         default: return nil
+        }
+    }
+}
+
+/// Chat-Modus: konversationeller Prompt und API-Payload.
+enum SamChat {
+    static func systemPrompt(
+        assistantName: String = "SAM",
+        userName: String = "Der Nutzer",
+        properNames: [ProperNameEntry] = []
+    ) -> String {
+        var prompt = """
+        Du bist \(assistantName), ein persönlicher Voice-Assistent auf macOS.
+        \(userName) führt einen Dialog mit dir. Antworte klar, prägnant und auf Deutsch,
+        sofern \(userName) nicht ausdrücklich eine andere Sprache wünscht.
+        """
+        if let block = SamTools.properNamesPromptBlock(from: properNames) {
+            prompt += "\n\n\(block)"
+        }
+        return prompt
+    }
+
+    @MainActor
+    static func resolvedSystemPrompt() -> String {
+        let settings = SettingsStore.shared
+        return systemPrompt(
+            assistantName: settings.assistantDisplayName,
+            userName: settings.userDisplayName,
+            properNames: settings.validProperNames
+        )
+    }
+
+    /// Baut die Nachrichtenliste für die API; Kontext nur bei der ersten User-Nachricht.
+    static func apiMessages(from messages: [SamChatMessage], initialContext: SessionContext?) -> [(role: String, content: String)] {
+        messages.enumerated().map { index, message in
+            if index == 0, message.role == .user, let context = initialContext {
+                return (message.role.apiRole, SamTools.userContent(transcript: message.content, context: context))
+            }
+            return (message.role.apiRole, message.content)
         }
     }
 }

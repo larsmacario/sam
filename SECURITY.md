@@ -1,8 +1,14 @@
 # Sicherheit
 
-## API-Keys
+## Lokale Daten (UserDefaults)
 
-SAM speichert API-Keys **lokal auf deinem Mac** in UserDefaults. Sie werden nicht an Dritte gesendet, außer an den von dir gewählten KI-Anbieter (Claude, OpenAI oder Gemini) bzw. an OpenAI bei Whisper online.
+SAM speichert folgende Daten **lokal auf deinem Mac** in UserDefaults:
+
+- **API-Keys** – nur für die von dir gewählten Dienste
+- **Einstellungen** – Modus, STT-Engine, Anbieter, Modell-IDs
+- **Eigennamen** – von dir eingetragene Bezeichnungen und Werte (Personalisierung)
+
+API-Keys und Transkripte werden nicht an Dritte gesendet, außer an den von dir gewählten KI-Anbieter (Claude, OpenAI oder Gemini) bzw. an OpenAI bei Whisper online. Eigennamen fließen in die System-Prompts der KI-Anfragen ein.
 
 Empfehlungen:
 

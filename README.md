@@ -7,10 +7,11 @@ SAM läuft als **Menüleisten-App** (kein Dock-Icon), startet optional beim Anme
 ## Funktionen
 
 - **Push-to-talk:** fn + ⌘ halten, sprechen, loslassen
-- **Zwei Modi:** Diktat (Sprache → Text) und KI (Sprache → Antwort)
+- **Drei Modi:** Diktat (Sprache → Text), KI (Sprache → Antwort), Chat (Mehrturn-Dialog)
 - **Drei STT-Engines:** Apple on-device (live), Whisper lokal (offline), Whisper online (OpenAI)
 - **Drei KI-Anbieter:** Claude, OpenAI, Gemini – frei wählbar
 - **Intent-Routing:** KI entscheidet, ob Text eingefügt oder in einem Fenster gezeigt wird
+- **Personalisierung:** Eigennamen (Assistent, Nutzer, Firma, Aussprache …) in den Einstellungen – fließen in KI-Prompts und UI
 
 ## Schnellstart (ohne Xcode)
 
@@ -31,7 +32,7 @@ SAM ist nicht notarisiert (kein App-Store-Build). Beim ersten Start zeigt macOS 
 |---|---|---|
 | macOS | 15 (Sequoia) oder neuer | 15 oder neuer |
 | Xcode | nicht nötig | 16+ (Swift 6) |
-| API-Key | nur für KI-Modus | nur für KI-Modus |
+| API-Key | nur für KI- und Chat-Modus | nur für KI- und Chat-Modus |
 
 **Diktat-Modus** funktioniert ohne API-Key und ohne Cloud – nur lokale Spracherkennung.
 
@@ -48,10 +49,20 @@ SAM ist nicht notarisiert (kein App-Store-Build). Beim ersten Start zeigt macOS 
 
 - **Diktat:** Sprache → Text wird direkt ins aktive Feld eingefügt. Kein KI-Aufruf, kein API-Key.
 - **KI:** Sprache → Transkription → KI → Antwort wird eingefügt oder in einem schwebenden Fenster gezeigt.
+- **Chat:** Sprache oder Text → Mehrturn-Dialog im Chat-Fenster; Nachfragen per Textfeld oder fn+⌘.
 
 ### Einstellungen öffnen
 
-Klicke auf das **Wellenform-Symbol** in der Menüleiste. Über das **Zahnrad** erreichst du Provider, Modelle und API-Keys.
+Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel hat **vier Tabs**:
+
+| Tab | Inhalt |
+|-----|--------|
+| **Start** | Status, Eingabemodus, Tastenkürzel, Berechtigungen, Autostart |
+| **Sprache** | STT-Engine, Whisper-Modell, Transkriptionssprache |
+| **KI** | Anbieter, Modell-ID, API-Key, Verbindungstest |
+| **Namen** | Eigennamen-Liste (Label + Wert) für Personalisierung |
+
+**Eigennamen:** Beliebig viele Einträge mit Bezeichnung und Wert – z. B. „Assistentenname“, „Dein Name“, „Firmenname“, „Aussprache“. Der Eintrag **Assistentenname** steuert die Anzeige in Chat- und Antwort-Fenstern; **Dein Name** wird in KI-Prompts verwendet. Alle gültigen Einträge werden der KI als Kontext mitgegeben.
 
 ### Spracherkennung (STT)
 
@@ -116,14 +127,15 @@ xcodegen generate
 |---------|--------|
 | fn-Taste reagiert nicht | Fallback: **rechte ⌘** halten (Aufnahme), **rechte ⌥** tippen (Modus) |
 | Hotkey / Einfügen funktioniert nicht | Bedienungshilfen-Freigabe prüfen; SAM in `/Applications` legen |
-| „Kein API-Key" im KI-Modus | API-Key in Einstellungen hinterlegen oder mit fn+⌥ in Diktat wechseln |
+| „Kein API-Key" im KI-/Chat-Modus | API-Key unter Tab **KI** hinterlegen oder mit fn+⌥ in Diktat wechseln |
+| Tab in Einstellungen reagiert nicht | App neu starten; SAM sollte in `/Applications` liegen |
 | Whisper lokal hängt | Erster Start lädt das Modell (~500 MB für „small") – warten |
 | Autostart funktioniert nicht | SAM muss in `/Applications` liegen |
 | Gatekeeper blockiert App | Rechtsklick → Öffnen (siehe Schnellstart) |
 
 ## Bekannte Einschränkungen
 
-- **API-Keys** werden lokal in UserDefaults gespeichert (nur auf deinem Mac, nicht im Keychain). Keychain-Speicherung ist für eine spätere Version geplant.
+- **API-Keys und Eigennamen** werden lokal in UserDefaults gespeichert (nur auf deinem Mac, nicht im Keychain). Keychain-Speicherung ist für eine spätere Version geplant.
 - **Keine Notarisierung** in v1 – einmalige Gatekeeper-Warnung beim ersten Öffnen.
 - **Streaming** von KI-Antworten ist nicht implementiert (Request/Response).
 - **Modell-IDs** können sich ändern, wenn Anbieter ihre APIs aktualisieren – in den Einstellungen anpassbar.
@@ -133,8 +145,9 @@ xcodegen generate
 ```
 Sam/
 ├── App/          # Einstieg, AppDelegate, AppState
-├── Core/         # Hotkey, Audio, STT, LLM-Clients, Output
-├── UI/           # Settings, Onboarding, Overlay, Design
+├── Core/         # Hotkey, Audio, STT, LLM-Clients, Chat, Output
+├── Models/       # ProperNameEntry (Eigennamen)
+├── UI/           # Settings (4 Tabs), Onboarding, Overlay, Design
 ├── Services/     # SettingsStore, LaunchAtLogin, Permissions
 └── Resources/    # Info.plist, App-Icon
 ```

@@ -12,6 +12,7 @@
 		07FD02985E9CBFAEC0AD5B3E /* Transcribing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0292819C594D0D933ADD6B8 /* Transcribing.swift */; };
 		0A5C2DA46357FFB6947B1426 /* InputMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 016506DEFA8F741D45D8CD69 /* InputMode.swift */; };
 		13AB318F494CAE1A6D7B6022 /* AuthProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = E060D4FA58C18F7B203DF0B1 /* AuthProviding.swift */; };
+		1828BACB9E21702302C4B4AA /* ChatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80204902A27B075495CF5EE2 /* ChatSession.swift */; };
 		1E3EF44CBFCDF8D30FD9C246 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B9F574123C08B60F4DE7C8C /* Carbon.framework */; };
 		1EDB060953875B0A43210DB6 /* SamControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF197FECC1D339211194F4F0 /* SamControls.swift */; };
 		2A13FCB4467DE5A40052857B /* TranscriberFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825B99C7C7511222701D395C /* TranscriberFactory.swift */; };
@@ -30,17 +31,18 @@
 		8848B97001CE18F09B53F8AC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D9DD44787250BC86128F1F /* AppDelegate.swift */; };
 		9D7257190BC025D33A853D4F /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B33A17CB19F89BCB3D2AE58 /* AppState.swift */; };
 		9DE71756D868126C1065D444 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E03C4B84B8D52B70A61067EE /* AudioRecorder.swift */; };
+		AAF474C9AE623C8763E2C466 /* Sam.icns in Resources */ = {isa = PBXBuildFile; fileRef = E2669A60EF6E65ACB3EC25A4 /* Sam.icns */; };
 		AE13F67E0A829F4FE8943F48 /* GeminiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE852C34588C8BEC4424DFF /* GeminiClient.swift */; };
 		B5FB39D169951A135AA64B8F /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F44ED9CD54B350EF70D5477A /* AppKit.framework */; };
 		B8C8685A722451FA6562948C /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = EBA1B8AF9561693DA478D00D /* WhisperKit */; };
 		B909B5142EAE52E84F842424 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A69C65D0BF0E2AB8DB7C55E9 /* HotkeyManager.swift */; };
 		B964AA8C2CCE619F10CD0526 /* ClaudeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22A4BA2F308C2FEB6CF3BA3 /* ClaudeClient.swift */; };
 		BB4A59545F024BE67A1A62B8 /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728765954E00DAC204380331 /* JSONValue.swift */; };
+		BD2162AB0EDEE073B4DD8EE6 /* ProperNameEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD8420D6FC745D30641C332B /* ProperNameEntry.swift */; };
 		C700E8085B2E77307AFE71B3 /* SpeechTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B2560E5B4B255674AF4481 /* SpeechTranscriber.swift */; };
 		D11DB0F1E7D4EEBEE625A258 /* OverlayWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7B0366312433406DF395FCA /* OverlayWindow.swift */; };
 		D9CB2E88B393F3508E718733 /* OutputRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881823AAD8BEF37360A2FAD0 /* OutputRouter.swift */; };
 		DC8795D10A3AF60B98F22789 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5169F24638D4659D5FB8F269 /* Assets.xcassets */; };
-		A1B2C3D4E5F60718293A4B5C /* Sam.icns in Resources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* Sam.icns */; };
 		F2E7F0546D334F33F8731BA7 /* WhisperLocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 760F5FEAE2A4177A03800ADA /* WhisperLocalTranscriber.swift */; };
 /* End PBXBuildFile section */
 
@@ -60,7 +62,6 @@
 		4BD2DA26DF6379AD1E64457F /* Sam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		501DCFB3A86D682C2F9529A1 /* Sam.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Sam.entitlements; sourceTree = "<group>"; };
 		5169F24638D4659D5FB8F269 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		B2C3D4E5F60718293A4B5C6D /* Sam.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Sam.icns; sourceTree = "<group>"; };
 		69197C8B2B81B7063AD32525 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6CE89EEFCF12BBB275C0F191 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		6F656393633CD8FC1F4279D3 /* ContextProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextProvider.swift; sourceTree = "<group>"; };
@@ -68,15 +69,18 @@
 		73781B7C31FDF05411DEAB3B /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
 		760F5FEAE2A4177A03800ADA /* WhisperLocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLocalTranscriber.swift; sourceTree = "<group>"; };
 		7EE852C34588C8BEC4424DFF /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
+		80204902A27B075495CF5EE2 /* ChatSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSession.swift; sourceTree = "<group>"; };
 		825B99C7C7511222701D395C /* TranscriberFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriberFactory.swift; sourceTree = "<group>"; };
 		881823AAD8BEF37360A2FAD0 /* OutputRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRouter.swift; sourceTree = "<group>"; };
 		A0292819C594D0D933ADD6B8 /* Transcribing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transcribing.swift; sourceTree = "<group>"; };
 		A4D5C79BE1C560104F413934 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
 		A69C65D0BF0E2AB8DB7C55E9 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		BD8420D6FC745D30641C332B /* ProperNameEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProperNameEntry.swift; sourceTree = "<group>"; };
 		D0D9DD44787250BC86128F1F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E03C4B84B8D52B70A61067EE /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		E060D4FA58C18F7B203DF0B1 /* AuthProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthProviding.swift; sourceTree = "<group>"; };
 		E22A4BA2F308C2FEB6CF3BA3 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
+		E2669A60EF6E65ACB3EC25A4 /* Sam.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Sam.icns; sourceTree = "<group>"; };
 		E62F24AF3FA0740BB221DE7C /* STTEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = STTEngine.swift; sourceTree = "<group>"; };
 		EF197FECC1D339211194F4F0 /* SamControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamControls.swift; sourceTree = "<group>"; };
 		F0F0F0B185C499BD67ED8DF6 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
@@ -145,6 +149,7 @@
 				501DCFB3A86D682C2F9529A1 /* Sam.entitlements */,
 				AA4F589A27A22963040291B4 /* App */,
 				C7A031339696D5E772CF459B /* Core */,
+				E1199D6AE4CC891F8EEAB15C /* Models */,
 				D041013C000A1FDED3D17C8E /* Protocols */,
 				F0EF0CEB4151F642D3FF94E5 /* Resources */,
 				614C66EC87E8CF3692783099 /* Services */,
@@ -167,6 +172,7 @@
 			isa = PBXGroup;
 			children = (
 				E03C4B84B8D52B70A61067EE /* AudioRecorder.swift */,
+				80204902A27B075495CF5EE2 /* ChatSession.swift */,
 				E22A4BA2F308C2FEB6CF3BA3 /* ClaudeClient.swift */,
 				6F656393633CD8FC1F4279D3 /* ContextProvider.swift */,
 				7EE852C34588C8BEC4424DFF /* GeminiClient.swift */,
@@ -205,12 +211,20 @@
 			path = Protocols;
 			sourceTree = "<group>";
 		};
+		E1199D6AE4CC891F8EEAB15C /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BD8420D6FC745D30641C332B /* ProperNameEntry.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		F0EF0CEB4151F642D3FF94E5 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				5169F24638D4659D5FB8F269 /* Assets.xcassets */,
-				B2C3D4E5F60718293A4B5C6D /* Sam.icns */,
 				69197C8B2B81B7063AD32525 /* Info.plist */,
+				E2669A60EF6E65ACB3EC25A4 /* Sam.icns */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -280,7 +294,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DC8795D10A3AF60B98F22789 /* Assets.xcassets in Resources */,
-				A1B2C3D4E5F60718293A4B5C /* Sam.icns in Resources */,
+				AAF474C9AE623C8763E2C466 /* Sam.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +310,7 @@
 				9D7257190BC025D33A853D4F /* AppState.swift in Sources */,
 				9DE71756D868126C1065D444 /* AudioRecorder.swift in Sources */,
 				13AB318F494CAE1A6D7B6022 /* AuthProviding.swift in Sources */,
+				1828BACB9E21702302C4B4AA /* ChatSession.swift in Sources */,
 				B964AA8C2CCE619F10CD0526 /* ClaudeClient.swift in Sources */,
 				81753499FAA5781861AE14BF /* ContextProvider.swift in Sources */,
 				AE13F67E0A829F4FE8943F48 /* GeminiClient.swift in Sources */,
@@ -308,6 +323,7 @@
 				5BF14E6E05F2F58C2CF579ED /* OpenAIClient.swift in Sources */,
 				D9CB2E88B393F3508E718733 /* OutputRouter.swift in Sources */,
 				D11DB0F1E7D4EEBEE625A258 /* OverlayWindow.swift in Sources */,
+				BD2162AB0EDEE073B4DD8EE6 /* ProperNameEntry.swift in Sources */,
 				66126BDB1D0E2F765ADE41D9 /* STTEngine.swift in Sources */,
 				2AE17F22B33100C04EFCCB8D /* SamApp.swift in Sources */,
 				1EDB060953875B0A43210DB6 /* SamControls.swift in Sources */,
@@ -392,6 +408,7 @@
 		7766DEBDD3858C6ECF2E2727 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sam/Sam.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -413,6 +430,7 @@
 		7A4B345B71124C0D86467C6A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sam/Sam.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;

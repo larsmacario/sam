@@ -32,10 +32,11 @@ final class OpenAIClient: LLMProviding {
         context: SessionContext,
         modelID: String
     ) async throws -> LLMOutputAction {
+        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
         let body = ChatRequest(
             model: modelID,
             messages: [
-                ChatMessage(role: "system", content: SamTools.systemPrompt),
+                ChatMessage(role: "system", content: systemPrompt),
                 ChatMessage(role: "user", content: SamTools.userContent(transcript: transcript, context: context))
             ],
             max_completion_tokens: 4096,
@@ -60,6 +61,31 @@ final class OpenAIClient: LLMProviding {
         }
 
         throw LLMError.noToolUse
+    }
+
+    func sendChat(
+        messages: [SamChatMessage],
+        initialContext: SessionContext?,
+        modelID: String
+    ) async throws -> String {
+        let payload = SamChat.apiMessages(from: messages, initialContext: initialContext)
+        let systemPrompt = await MainActor.run { SamChat.resolvedSystemPrompt() }
+        var chatMessages = [ChatMessage(role: "system", content: systemPrompt)]
+        chatMessages.append(contentsOf: payload.map { ChatMessage(role: $0.role, content: $0.content) })
+
+        let body = ChatRequest(
+            model: modelID,
+            messages: chatMessages,
+            max_completion_tokens: 4096,
+            tools: nil,
+            tool_choice: nil
+        )
+
+        let response: ChatResponse = try await send(body)
+        if let content = response.choices.first?.message.content, !content.isEmpty {
+            return content
+        }
+        throw LLMError.invalidResponse
     }
 
     private func makeTool(name: String, description: String, argDescription: String) -> Tool {

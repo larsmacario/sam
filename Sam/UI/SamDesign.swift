@@ -33,12 +33,13 @@ enum SamDesign {
     static let accent = Color(hex: 0x0A84FF)
     static let dictateColor = Color(hex: 0x0A84FF)
     static let chatColor = Color(hex: 0xBF5AF2)
+    static let dialogColor = Color(hex: 0x64D2FF)
     static let success = Color(hex: 0x30D158)
     static let warning = Color(hex: 0xFF9F0A)
 
     // Panel
     static let panelWidth: CGFloat = 440
-    static let panelHeight: CGFloat = 580
+    static let panelHeight: CGFloat = 620
     static let panelCornerRadius: CGFloat = 18
     static let panelGapBelowIcon: CGFloat = 4
     static let panelArrowWidth: CGFloat = 18
@@ -47,6 +48,19 @@ enum SamDesign {
     static let panelShadowRadius: CGFloat = 32
     static let panelShadowY: CGFloat = 14
 
+    // Chat-Sidepanel (rechts, 90 % Bildschirmhöhe)
+    static let chatPanelWidth: CGFloat = 420
+    static let chatPanelHeightRatio: CGFloat = 0.9
+    static let chatPanelScreenInset: CGFloat = 12
+    static let chatPanelCornerRadius: CGFloat = 18
+
+    static let chatPanelShape = UnevenRoundedRectangle(
+        topLeadingRadius: chatPanelCornerRadius,
+        bottomLeadingRadius: chatPanelCornerRadius,
+        bottomTrailingRadius: 0,
+        topTrailingRadius: 0,
+        style: .continuous
+    )
     // Cards (Control-Center-Module)
     static let cardCornerRadius: CGFloat = 14
     static let hairlineOpacity: Double = 0.06
@@ -241,6 +255,7 @@ extension InputMode {
         switch self {
         case .dictation: return SamDesign.dictateColor
         case .ai: return SamDesign.chatColor
+        case .chat: return SamDesign.dialogColor
         }
     }
 
@@ -248,6 +263,7 @@ extension InputMode {
         switch self {
         case .dictation: return "mic.fill"
         case .ai: return "sparkles"
+        case .chat: return "bubble.left.and.bubble.right.fill"
         }
     }
 
@@ -255,6 +271,7 @@ extension InputMode {
         switch self {
         case .dictation: return "Sprich jetzt…"
         case .ai: return "Frage stellen…"
+        case .chat: return "Chat starten…"
         }
     }
 }

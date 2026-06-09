@@ -11,7 +11,7 @@ struct OnboardingView: View {
     private let steps: [(title: String, description: String, icon: String)] = [
         (
             "Willkommen bei SAM",
-            "SAM startet beim Anmelden und bleibt dauerhaft in der Menüleiste. Halte fn+⌘, sprich, und lasse los. Mit fn+⌥ wechselst du zwischen Diktat (direkt einfügen) und KI. Die Transkription läuft lokal auf deinem Mac.",
+            "SAM startet beim Anmelden und bleibt dauerhaft in der Menüleiste. Halte fn+⌘, sprich, und lasse los. Mit fn+⌥ wechselst du zwischen Diktat, KI und Chat. Die Transkription läuft lokal auf deinem Mac.",
             "waveform.circle"
         ),
         (
@@ -31,7 +31,7 @@ struct OnboardingView: View {
         ),
         (
             "API-Key (optional)",
-            "Nur für den KI-Modus: In den Einstellungen einen Anbieter wählen und API-Key eintragen. Diktat funktioniert ohne Key.",
+            "Für KI- und Chat-Modus: In den Einstellungen einen Anbieter wählen und API-Key eintragen. Diktat funktioniert ohne Key.",
             "key.fill"
         )
     ]

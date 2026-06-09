@@ -20,6 +20,9 @@ final class SettingsStore: ObservableObject {
     @Published var configuredProviders: Set<LLMProvider> = []
     @Published var lastConnectionTestResult: String?
 
+    /// Benutzerdefinierte Eigennamen (Label + Wert).
+    @Published private(set) var properNames: [ProperNameEntry] = []
+
     var selectedProvider: LLMProvider {
         get { LLMProvider(rawValue: selectedProviderRaw) ?? .claude }
         set {
@@ -28,7 +31,7 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Aktiver Eingabemodus (Diktat vs. KI), umgeschaltet per fn+Option.
+    /// Aktiver Eingabemodus (Diktat, KI oder Chat), umgeschaltet per fn+Option.
     var inputMode: InputMode {
         get { InputMode(rawValue: inputModeRaw) ?? .ai }
         set {
@@ -70,8 +73,66 @@ final class SettingsStore: ObservableObject {
         }
     }
 
+    private static let properNamesKey = "properNames"
+
     private init() {
+        loadProperNames()
         refreshConfiguredProviders()
+    }
+
+    // MARK: - Eigennamen
+
+    /// Anzeigename des Assistenten in der UI; Fallback „SAM“.
+    var assistantDisplayName: String {
+        value(forLabel: ProperNameLabel.assistantName) ?? "SAM"
+    }
+
+    /// Name des Nutzers für KI-Prompts; Fallback „Der Nutzer“.
+    var userDisplayName: String {
+        value(forLabel: ProperNameLabel.userName) ?? "Der Nutzer"
+    }
+
+    /// Gültige Einträge für den KI-Kontextblock.
+    var validProperNames: [ProperNameEntry] {
+        properNames.filter(\.isValid)
+    }
+
+    func value(forLabel label: String) -> String? {
+        guard let entry = properNames.first(where: { ProperNameLabel.matches($0.label, label) }),
+              entry.isValid else { return nil }
+        return entry.trimmedValue
+    }
+
+    func addProperName(label: String = "", value: String = "") {
+        properNames.append(ProperNameEntry(label: label, value: value))
+        persistProperNames()
+    }
+
+    func updateProperName(_ entry: ProperNameEntry) {
+        guard let index = properNames.firstIndex(where: { $0.id == entry.id }) else { return }
+        properNames[index] = entry
+        persistProperNames()
+    }
+
+    func removeProperName(id: UUID) {
+        properNames.removeAll { $0.id == id }
+        persistProperNames()
+    }
+
+    private func loadProperNames() {
+        guard let data = defaults.data(forKey: Self.properNamesKey),
+              let decoded = try? JSONDecoder().decode([ProperNameEntry].self, from: data) else {
+            properNames = []
+            return
+        }
+        properNames = decoded
+    }
+
+    private func persistProperNames() {
+        if let data = try? JSONEncoder().encode(properNames) {
+            defaults.set(data, forKey: Self.properNamesKey)
+        }
+        objectWillChange.send()
     }
 
     // MARK: - Modell-Wahl (pro Provider gemerkt)
