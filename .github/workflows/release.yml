@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -scheme Sam -project Sam.xcodeproj
+
+      - name: Build Release
+        run: |
+          xcodebuild \
+            -scheme Sam \
+            -project Sam.xcodeproj \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package SAM.app
+        run: |
+          APP_PATH="DerivedData/Build/Products/Release/SAM.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "SAM.app not found at $APP_PATH"
+            exit 1
+          fi
+          mkdir -p dist
+          ditto "$APP_PATH" dist/SAM.app
+          cd dist && zip -r ../SAM.zip SAM.app
+          ls -la ../SAM.zip
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SAM.zip
+          generate_release_notes: true
