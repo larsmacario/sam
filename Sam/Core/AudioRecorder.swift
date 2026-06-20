@@ -36,23 +36,33 @@ enum MicrophonePermissionService {
         NSWorkspace.shared.open(url)
     }
 
-    /// Dialog anfordern; bei Verweigerung Systemeinstellungen öffnen.
+    /// Erster Klick: nur macOS-Systemdialog. Erneuter Klick: nur Systemeinstellungen.
     static func requestPermission(onRefresh: (@MainActor () -> Void)? = nil) {
         Task { @MainActor in
+            if hasPermission {
+                onRefresh?()
+                return
+            }
+
             let status = AVAudioApplication.shared.recordPermission
             if status == .denied {
                 openSystemSettings()
-            } else {
+                scheduleRefresh(onRefresh)
+                return
+            }
+
+            if !hasPromptedThisSession {
+                hasPromptedThisSession = true
                 _ = await requestPermission()
-                // TCC-Eintrag auslösen, damit SAM in Datenschutz → Mikrofon erscheint.
                 triggerMicrophoneRegistration()
-                if AVAudioApplication.shared.recordPermission != .granted {
-                    openSystemSettings()
-                }
+            } else {
+                openSystemSettings()
             }
             scheduleRefresh(onRefresh)
         }
     }
+
+    private static var hasPromptedThisSession = false
 
     /// Kurz den Audio-Input ansprechen — registriert die App bei macOS für Mikrofon-Datenschutz.
     private static func triggerMicrophoneRegistration() {

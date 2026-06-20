@@ -30,7 +30,11 @@ final class WhisperOnlineTranscriber: Transcribing, @unchecked Sendable {
 
     func finish() async throws -> String {
         let samples = collector.drain()
-        // Zu kurz (< 0,2 s) → kein sinnvolles Audio.
+        return try await transcribeSamples(samples)
+    }
+
+    /// Transkribiert vorgegebene Samples (Meeting-Chunks, Online-Fallback).
+    func transcribeSamples(_ samples: [Float]) async throws -> String {
         guard samples.count > Int(AudioSampleCollector.targetSampleRate * 0.2) else { return "" }
 
         guard await authProvider.isConfigured else {

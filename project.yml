@@ -50,6 +50,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: Speech.framework
       - sdk: Carbon.framework
+      - sdk: ScreenCaptureKit.framework
       - package: WhisperKit
         product: WhisperKit
     entitlements:

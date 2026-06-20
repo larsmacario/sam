@@ -3,7 +3,7 @@ import os
 
 private let logger = Logger(subsystem: "de.larsmacario.sam", category: "GeminiClient")
 
-/// Google Gemini generateContent API mit Function Calling für Intent-Routing.
+/// Google Gemini generateContent API für KI-Aktionen und Mehrturn-Chat.
 final class GeminiClient: LLMProviding {
     private let authProvider: AuthProviding
     private let session: URLSession
@@ -24,36 +24,33 @@ final class GeminiClient: LLMProviding {
         return response.firstText ?? "Verbindung OK"
     }
 
-    func processTranscript(
+    func processAction(
         transcript: String,
         context: SessionContext,
         modelID: String
-    ) async throws -> LLMOutputAction {
-        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
+    ) async throws -> String {
+        let systemPrompt = await MainActor.run { SamTools.resolvedActionSystemPrompt() }
         let body = GenerateRequest(
             system_instruction: Content(role: nil, parts: [Part(text: systemPrompt, functionCall: nil)]),
             contents: [Content(role: "user", parts: [Part(text: SamTools.userContent(transcript: transcript, context: context), functionCall: nil)])],
-            tools: [Tool(function_declarations: [
-                makeFunction(name: SamTools.insertTextName, description: SamTools.insertTextDescription, argDescription: "Der einzufügende Text"),
-                makeFunction(name: SamTools.showAnswerName, description: SamTools.showAnswerDescription, argDescription: "Die anzuzeigende Antwort")
-            ])],
+            tools: [Tool(function_declarations: [makeInsertFunction()])],
             tool_config: ToolConfig(function_calling_config: FunctionCallingConfig(mode: "ANY"))
         )
 
         let response: GenerateResponse = try await send(body, modelID: modelID)
 
-        if let call = response.firstFunctionCall {
-            let text = call.args?[SamTools.textArgName]?.stringValue
-            if let text, let action = SamTools.action(forToolName: call.name, text: text) {
-                return action
-            }
+        if let call = response.firstFunctionCall,
+           call.name == SamTools.insertTextName,
+           let text = call.args?[SamTools.textArgName]?.stringValue,
+           !text.isEmpty {
+            return text
         }
 
         if let text = response.firstText, !text.isEmpty {
-            return .showAnswer(text)
+            return text
         }
 
-        throw LLMError.noToolUse
+        throw LLMError.noActionOutput
     }
 
     func sendChat(
@@ -84,12 +81,27 @@ final class GeminiClient: LLMProviding {
         throw LLMError.invalidResponse
     }
 
-    private func makeFunction(name: String, description: String, argDescription: String) -> FunctionDeclaration {
+    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
+        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
+        let body = GenerateRequest(
+            system_instruction: Content(role: nil, parts: [Part(text: systemPrompt, functionCall: nil)]),
+            contents: [Content(role: "user", parts: [Part(text: "Meeting-Transkript:\n\n\(transcript)", functionCall: nil)])],
+            tools: nil,
+            tool_config: nil
+        )
+        let response: GenerateResponse = try await send(body, modelID: modelID)
+        guard let text = response.firstText, !text.isEmpty else {
+            throw LLMError.invalidResponse
+        }
+        return try SamMeeting.parseSummaryJSON(text)
+    }
+
+    private func makeInsertFunction() -> FunctionDeclaration {
         FunctionDeclaration(
-            name: name,
-            description: description,
+            name: SamTools.insertTextName,
+            description: SamTools.insertTextDescription,
             parameters: ParametersSchema(
-                properties: [SamTools.textArgName: PropertySchema(type: "string", description: argDescription)],
+                properties: [SamTools.textArgName: PropertySchema(type: "string", description: "Der einzufügende Text")],
                 required: [SamTools.textArgName]
             )
         )

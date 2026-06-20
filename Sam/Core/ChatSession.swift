@@ -28,6 +28,23 @@ final class ChatSessionController: ObservableObject {
         overlay.hideChat()
     }
 
+    /// Zeigt ein KI-Modus-Ergebnis im Chat (markierter Text ohne Textfeld) – ohne zweiten LLM-Aufruf.
+    func presentAIResult(instruction: String, result: String, context: SessionContext?) {
+        messages = []
+        initialContext = context
+        isProcessing = false
+
+        var userContent = instruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let selected = context?.selectedText, !selected.isEmpty {
+            userContent += "\n\n(Markierter Text, \(selected.count) Zeichen)"
+        }
+
+        messages.append(SamChatMessage(role: .user, content: userContent))
+        messages.append(SamChatMessage(role: .assistant, content: result))
+        overlay.showChat()
+        logger.info("KI-Ergebnis im Chat: Länge=\(result.count)")
+    }
+
     /// Sendet eine User-Nachricht (Sprache oder Text) und holt die Assistant-Antwort.
     func send(text: String, context: SessionContext?) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

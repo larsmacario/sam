@@ -1,8 +1,11 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @ObservedObject var settings = SettingsStore.shared
     @ObservedObject var appState = AppState.shared
+    @ObservedObject var meetingSession = MeetingSessionController.shared
+    @ObservedObject var meetingStore = MeetingStore.shared
     var launchAtLoginService: LaunchAtLoginService
     var onShowOnboarding: () -> Void
     @State private var tab: SettingsTab = .hauptseite
@@ -12,14 +15,16 @@ struct SettingsView: View {
     @State private var testMessage: String?
     @State private var testIsError = false
     @State private var saveMessage: String?
+    @State private var selectedMeetingID: UUID?
 
     private var provider: LLMProvider { settings.selectedProvider }
 
     private var inputModeSubtitle: String {
         switch settings.inputMode {
         case .dictation: return "Sprache → Text einfügen"
-        case .ai: return "Sprache → KI antwortet"
+        case .ai: return "Sprache → Aktion am Cursor"
         case .chat: return "Mehrturn-Dialog im Fenster"
+        case .meeting: return "fn+⌘ startet/stoppt Meeting"
         }
     }
 
@@ -33,6 +38,7 @@ struct SettingsView: View {
                     case .hauptseite: hauptseiteTab
                     case .sprache: spracheTab
                     case .ki: kiTab
+                    case .meetings: meetingsTab
                     case .namen: namenTab
                     }
                 }
@@ -61,16 +67,6 @@ struct SettingsView: View {
 
     private var header: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(settings.assistantDisplayName)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 2)
-            .padding(.bottom, 8)
-
             Group {
                 if tab == .hauptseite {
                     statusHeader
@@ -81,6 +77,7 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .padding(.top, 12)
             .padding(.bottom, 10)
 
             if let error = appState.errorMessage, tab == .hauptseite {
@@ -171,7 +168,10 @@ struct SettingsView: View {
                 SamRow(last: true) {
                     RowLabel(title: "Aktiver Modus", sub: inputModeSubtitle)
                     Spacer()
-                    Picker("", selection: Binding(get: { settings.inputMode }, set: { settings.inputMode = $0 })) {
+                    Picker("", selection: Binding(
+                        get: { settings.inputMode },
+                        set: { appState.setInputMode($0) }
+                    )) {
                         ForEach(InputMode.allCases) { Text($0.displayName).tag($0) }
                     }
                     .labelsHidden().pickerStyle(.segmented).frame(width: 220)
@@ -181,7 +181,7 @@ struct SettingsView: View {
             SecLabel(title: "Tastenkürzel", systemImage: "command")
             SamGroup {
                 shortcutRow(modifier: "Cmd", title: "Aufnehmen", desc: "Push-to-talk halten")
-                shortcutRow(modifier: "Option", title: "Modus wechseln", desc: "Diktat → KI → Chat", last: true)
+                shortcutRow(modifier: "Option", title: "Modus wechseln", desc: "Diktat → KI → Chat → Meeting", last: true)
             }
 
             SecLabel(title: "Berechtigungen", systemImage: "checkmark.shield")
@@ -193,7 +193,7 @@ struct SettingsView: View {
                     appState.requestMicrophonePermission()
                 }
                 permissionRow("Spracherkennung", granted: appState.speechGranted, last: true) {
-                    Task { _ = await SpeechTranscriber.requestPermission() }
+                    appState.requestSpeechPermission()
                 }
             }
         }
@@ -339,6 +339,160 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Meetings
+
+    private var meetingsTab: some View {
+        Group {
+            SecLabel(title: "Aufnahme", systemImage: "person.3.fill")
+            SamGroup {
+                SamRow {
+                    RowLabel(title: "Audio-Quelle", sub: settings.meetingAudioSource.displayName)
+                    Spacer()
+                    Picker("", selection: Binding(get: { settings.meetingAudioSource }, set: { settings.meetingAudioSource = $0 })) {
+                        ForEach(MeetingAudioSource.allCases) { Text($0.displayName).tag($0) }
+                    }
+                    .labelsHidden().pickerStyle(.menu).fixedSize()
+                }
+                SamRow {
+                    RowLabel(title: "Chunk-Intervall", sub: "\(Int(settings.meetingChunkIntervalSeconds / 60)) Min.")
+                    Spacer()
+                    Picker("", selection: Binding(
+                        get: { settings.meetingChunkIntervalSeconds },
+                        set: { settings.meetingChunkIntervalSeconds = $0 }
+                    )) {
+                        Text("1 Min.").tag(60.0)
+                        Text("3 Min.").tag(180.0)
+                        Text("5 Min.").tag(300.0)
+                    }
+                    .labelsHidden().pickerStyle(.menu).fixedSize()
+                }
+                SamRow(last: true) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if meetingSession.isActive {
+                            Text("Meeting läuft")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("fn+⌘ zum Beenden")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("fn+⌥ → Meeting-Modus, dann fn+⌘ zum Starten")
+                                .font(.system(size: 12.5))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+
+            if settings.meetingAudioSource.needsSystemAudio {
+                SecLabel(title: "System-Audio", systemImage: "display")
+                SamGroup {
+                    SamRow(last: true) {
+                        Text("Bildschirmaufnahme")
+                            .font(.system(size: 14, weight: .medium))
+                        Spacer()
+                        Image(systemName: appState.screenCaptureGranted ? "checkmark.circle.fill" : "xmark.circle")
+                            .foregroundStyle(appState.screenCaptureGranted ? SamDesign.success : SamDesign.warning)
+                        if !appState.screenCaptureGranted {
+                            Button("Erlauben") {
+                                appState.requestScreenCapturePermission()
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(SamDesign.accent)
+                        }
+                    }
+                }
+            }
+
+            SecLabel(title: "Historie", systemImage: "clock.arrow.circlepath")
+
+            if !meetingStore.incompleteMeetings.isEmpty {
+                SecLabel(title: "Wiederherstellen", systemImage: "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90")
+                SamGroup {
+                    ForEach(Array(meetingStore.incompleteMeetings.enumerated()), id: \.element.id) { index, meeting in
+                        IncompleteMeetingRow(
+                            meeting: meeting,
+                            isLast: index == meetingStore.incompleteMeetings.count - 1,
+                            isRecovering: meetingSession.status == .recovering,
+                            onRecover: {
+                                Task {
+                                    do {
+                                        try await meetingSession.recoverIncompleteMeeting(meeting)
+                                        meetingStore.reload()
+                                    } catch {
+                                        appState.errorMessage = error.localizedDescription
+                                    }
+                                }
+                            },
+                            onDiscard: {
+                                meetingSession.discardIncompleteMeeting(meeting)
+                            }
+                        )
+                    }
+                }
+            }
+
+            SamGroup {
+                SamRow(last: true) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Speicherort")
+                            .font(.system(size: 14, weight: .medium))
+                        Text(settings.meetingStorageDirectoryDisplayPath)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .textSelection(.enabled)
+                    }
+                    Spacer(minLength: 12)
+                    HStack(spacing: 10) {
+                        if settings.usesCustomMeetingStorageDirectory {
+                            Button("Standard") {
+                                settings.resetMeetingStorageDirectory()
+                                meetingStore.reload()
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(.secondary)
+                        }
+                        Button("Ordner wählen…") {
+                            chooseMeetingStorageFolder()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(SamDesign.accent)
+                    }
+                }
+            }
+            if meetingStore.meetings.isEmpty {
+                SamGroup {
+                    SamRow(last: true) {
+                        Text("Noch keine Meetings gespeichert.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                SamGroup {
+                    ForEach(Array(meetingStore.meetings.enumerated()), id: \.element.id) { index, meeting in
+                        MeetingHistoryRow(
+                            meeting: meeting,
+                            isLast: index == meetingStore.meetings.count - 1,
+                            isExpanded: selectedMeetingID == meeting.id,
+                            onToggle: {
+                                selectedMeetingID = selectedMeetingID == meeting.id ? nil : meeting.id
+                            },
+                            onDelete: {
+                                meetingStore.delete(id: meeting.id)
+                                if selectedMeetingID == meeting.id { selectedMeetingID = nil }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Namen
 
     private var namenTab: some View {
@@ -453,6 +607,21 @@ struct SettingsView: View {
         apiKeyInput = ""
     }
 
+    private func chooseMeetingStorageFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.message = "Ordner für Meeting-Historie wählen"
+        panel.prompt = "Auswählen"
+        panel.directoryURL = meetingStore.storageDirectory
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        settings.meetingStorageDirectoryPath = url.path
+        meetingStore.reload()
+    }
+
     private func saveAPIKey() {
         settings.saveAPIKey(apiKeyInput, for: provider)
         apiKeyInput = ""
@@ -475,6 +644,145 @@ struct SettingsView: View {
         } catch {
             testMessage = error.localizedDescription
             testIsError = true
+        }
+    }
+}
+
+// MARK: - Unvollständige Meetings
+
+private struct IncompleteMeetingRow: View {
+    let meeting: MeetingRecord
+    var isLast: Bool
+    var isRecovering: Bool
+    var onRecover: () -> Void
+    var onDiscard: () -> Void
+
+    private var dateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "de_DE")
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(meeting.title)
+                            .font(.system(size: 14, weight: .medium))
+                        Text("\(dateFormatter.string(from: meeting.startedAt)) · Aufnahme unterbrochen")
+                            .font(.system(size: 12))
+                            .foregroundStyle(SamDesign.warning)
+                    }
+                    Spacer()
+                }
+                HStack(spacing: 12) {
+                    Button(isRecovering ? "Wird wiederhergestellt…" : "Wiederherstellen") {
+                        onRecover()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(SamDesign.accent)
+                    .disabled(isRecovering)
+
+                    Button("Verwerfen") {
+                        onDiscard()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.secondary)
+                    .disabled(isRecovering)
+                }
+            }
+            .padding(14)
+
+            if !isLast {
+                Rectangle()
+                    .fill(Color.white.opacity(SamDesign.hairlineOpacity))
+                    .frame(height: 0.5)
+                    .padding(.leading, 14)
+            }
+        }
+    }
+}
+
+// MARK: - Meeting-Historie
+
+private struct MeetingHistoryRow: View {
+    let meeting: MeetingRecord
+    var isLast: Bool
+    var isExpanded: Bool
+    var onToggle: () -> Void
+    var onDelete: () -> Void
+
+    private var dateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "de_DE")
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: onToggle) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(meeting.title)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.primary)
+                        Text("\(dateFormatter.string(from: meeting.startedAt)) · \(meeting.formattedDuration)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(role: .destructive, action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(14)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    if let summary = meeting.summary, !summary.overview.isEmpty {
+                        Text(summary.overview)
+                            .font(.system(size: 13))
+                        if !summary.actionItems.isEmpty {
+                            Text("Action Items")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            ForEach(summary.actionItems) { item in
+                                Text("• \(item.task)")
+                                    .font(.system(size: 12.5))
+                            }
+                        }
+                    }
+                    if !meeting.fullTranscript.isEmpty {
+                        Text(meeting.fullTranscript)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+            }
+
+            if !isLast {
+                Rectangle()
+                    .fill(Color.white.opacity(SamDesign.hairlineOpacity))
+                    .frame(height: 0.5)
+                    .padding(.leading, 14)
+            }
         }
     }
 }

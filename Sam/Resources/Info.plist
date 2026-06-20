@@ -28,6 +28,8 @@
 	<string>SAM benötigt Mikrofonzugriff, um deine Sprache aufzunehmen.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>SAM nutzt lokale Spracherkennung, um deine Sprache in Text umzuwandeln.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>SAM benötigt Bildschirmaufnahme, um System-Audio aus Online-Meetings aufzuzeichnen.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

@@ -7,10 +7,10 @@ SAM läuft als **Menüleisten-App** (kein Dock-Icon), startet optional beim Anme
 ## Funktionen
 
 - **Push-to-talk:** fn + ⌘ halten, sprechen, loslassen
-- **Drei Modi:** Diktat (Sprache → Text), KI (Sprache → Antwort), Chat (Mehrturn-Dialog)
+- **Vier Modi:** Diktat, KI, Chat, Meeting (fn + ⌥ zum Wechseln)
+- **Meeting-Modus:** fn + ⌘ startet/stoppt Aufnahme mit Transkript und KI-Zusammenfassung
 - **Drei STT-Engines:** Apple on-device (live), Whisper lokal (offline), Whisper online (OpenAI)
 - **Drei KI-Anbieter:** Claude, OpenAI, Gemini – frei wählbar
-- **Intent-Routing:** KI entscheidet, ob Text eingefügt oder in einem Fenster gezeigt wird
 - **Personalisierung:** Eigennamen (Assistent, Nutzer, Firma, Aussprache …) in den Einstellungen – fließen in KI-Prompts und UI
 
 ## Schnellstart (ohne Xcode)
@@ -44,22 +44,25 @@ SAM ist nicht notarisiert (kein App-Store-Build). Beim ersten Start zeigt macOS 
 |--------|-------------------|----------|
 | Aufnehmen (halten) | fn + ⌘ | rechte ⌘ |
 | Modus wechseln (tippen) | fn + ⌥ | rechte ⌥ |
+| Meeting starten/stoppen | fn + ⌘ (im Meeting-Modus) | — |
 
 ### Modi
 
 - **Diktat:** Sprache → Text wird direkt ins aktive Feld eingefügt. Kein KI-Aufruf, kein API-Key.
-- **KI:** Sprache → Transkription → KI → Antwort wird eingefügt oder in einem schwebenden Fenster gezeigt.
+- **KI:** Sprache → KI führt eine Handlung am Cursor aus (übersetzen, E-Mail schreiben, umformulieren) und fügt das Ergebnis ein.
 - **Chat:** Sprache oder Text → Mehrturn-Dialog im Chat-Fenster; Nachfragen per Textfeld oder fn+⌘.
+- **Meeting:** fn+⌥ wählt den Modus (Idle-Pille erscheint). fn+⌘ startet nach Zustimmungshinweis und optionalem Namen die Aufnahme; fn+⌘ erneut beendet das Meeting. Transkript und Zusammenfassung in den Einstellungen unter **Meetings**.
 
 ### Einstellungen öffnen
 
-Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel hat **vier Tabs**:
+Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel hat **fünf Tabs**:
 
 | Tab | Inhalt |
 |-----|--------|
 | **Start** | Status, Eingabemodus, Tastenkürzel, Berechtigungen, Autostart |
 | **Sprache** | STT-Engine, Whisper-Modell, Transkriptionssprache |
 | **KI** | Anbieter, Modell-ID, API-Key, Verbindungstest |
+| **Meetings** | Audio-Quelle, Chunk-Intervall, Meeting-Historie |
 | **Namen** | Eigennamen-Liste (Label + Wert) für Personalisierung |
 
 **Eigennamen:** Beliebig viele Einträge mit Bezeichnung und Wert – z. B. „Assistentenname“, „Dein Name“, „Firmenname“, „Aussprache“. Der Eintrag **Assistentenname** steuert die Anzeige in Chat- und Antwort-Fenstern; **Dein Name** wird in KI-Prompts verwendet. Alle gültigen Einträge werden der KI als Kontext mitgegeben.

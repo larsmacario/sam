@@ -8,5 +8,9 @@ struct SamApp: App {
         Settings {
             EmptyView()
         }
+        .commands {
+            // Verhindert ein leeres SwiftUI-Einstellungsfenster neben dem Menüleisten-Popover.
+            CommandGroup(replacing: .appSettings) { }
+        }
     }
 }

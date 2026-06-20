@@ -32,6 +32,11 @@ final class WhisperLocalTranscriber: Transcribing, @unchecked Sendable {
 
     func finish() async throws -> String {
         let samples = collector.drain()
+        return try await transcribeSamples(samples)
+    }
+
+    /// Transkribiert vorgegebene Samples (Meeting-Chunks).
+    func transcribeSamples(_ samples: [Float]) async throws -> String {
         guard samples.count > Int(AudioSampleCollector.targetSampleRate * 0.2) else { return "" }
 
         let pipe = try await pipeline()

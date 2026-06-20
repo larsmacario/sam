@@ -51,6 +51,7 @@ final class AppState: ObservableObject {
     @Published var accessibilityGranted = false
     @Published var microphoneGranted = false
     @Published var speechGranted = false
+    @Published var screenCaptureGranted = false
 
     private var monitorTask: Task<Void, Never>?
 
@@ -61,6 +62,8 @@ final class AppState: ObservableObject {
 
     private var transcriber: (any Transcribing)?
     private var isSessionActive = false
+    /// Im KI-Modus beim Hotkey-Press erfasster Kontext (Markierung noch aktiv).
+    private var aiSessionContext: SessionContext?
 
     private init() {}
 
@@ -69,6 +72,9 @@ final class AppState: ObservableObject {
         setupHotkeyCallbacks()
         refreshPermissions()
         startPermissionMonitoring()
+        if settings.inputMode == .meeting {
+            overlay.showMeetingModeIdle()
+        }
     }
 
     /// Pollt den Berechtigungsstatus, aktualisiert die UI live und startet den
@@ -83,6 +89,10 @@ final class AppState: ObservableObject {
         }
     }
 
+    var allRequiredPermissionsGranted: Bool {
+        accessibilityGranted && microphoneGranted && speechGranted
+    }
+
     func refreshPermissions() {
         let ax = hotkeyManager.isAccessibilityGranted
         let axWas = accessibilityGranted
@@ -90,6 +100,7 @@ final class AppState: ObservableObject {
         accessibilityGranted = ax
         microphoneGranted = AudioRecorder.hasPermission
         speechGranted = SpeechTranscriber.hasPermission
+        screenCaptureGranted = ScreenCapturePermissionService.hasPermission
 
         if ax && !axWas {
             restartHotkey()
@@ -101,6 +112,19 @@ final class AppState: ObservableObject {
             errorMessage = "Bedienungshilfen-Freigabe fehlt für den Hotkey."
             status = .error
         }
+
+        if allRequiredPermissionsGranted && !settings.hasCompletedOnboarding {
+            completeOnboarding()
+        }
+    }
+
+    /// Schließt das Einrichtungsfenster, sobald alle Pflicht-Berechtigungen erteilt sind.
+    func completeOnboarding() {
+        guard !settings.hasCompletedOnboarding else { return }
+        settings.hasCompletedOnboarding = true
+        showOnboarding = false
+        restartHotkey()
+        NotificationCenter.default.post(name: .samOnboardingCompleted, object: nil)
     }
 
     func restartHotkey() {
@@ -138,13 +162,39 @@ final class AppState: ObservableObject {
     /// Wechselt den Eingabemodus (fn+option) und zeigt ihn klar sichtbar in der Pille.
     func toggleInputMode() {
         guard !isSessionActive else { return }
+        setInputMode(settings.inputMode.toggled())
+    }
+
+    /// Setzt den Eingabemodus (Settings-Picker oder fn+⌥).
+    func setInputMode(_ mode: InputMode) {
+        guard !isSessionActive else { return }
         let previousMode = settings.inputMode
-        settings.inputMode = settings.inputMode.toggled()
+        guard previousMode != mode else { return }
+
+        settings.inputMode = mode
+
         if previousMode == .chat {
             ChatSessionController.shared.reset()
         }
-        overlay.flashMode(settings.inputMode)
-        logger.info("Eingabemodus gewechselt: \(self.settings.inputMode.rawValue, privacy: .public)")
+
+        if previousMode == .meeting {
+            Task {
+                if MeetingSessionController.shared.isActive {
+                    await stopMeeting()
+                }
+                overlay.hideMeetingMode()
+                if mode != .meeting {
+                    overlay.flashMode(mode)
+                }
+            }
+        } else if mode == .meeting {
+            overlay.showMeetingModeIdle()
+        } else {
+            overlay.hideMeetingMode()
+            overlay.flashMode(mode)
+        }
+
+        logger.info("Eingabemodus gewechselt: \(mode.rawValue, privacy: .public)")
     }
 
     func closeChatSession() {
@@ -175,12 +225,23 @@ final class AppState: ObservableObject {
 
     private func handleHotkeyPress() async {
         guard !isSessionActive else { return }
+
+        if settings.inputMode == .meeting {
+            isSessionActive = true
+            overlay.setMeetingHotkeyPressed(true)
+            return
+        }
+
         if settings.inputMode == .chat && ChatSessionController.shared.isProcessing {
             return
         }
         isSessionActive = true
         status = .listening
         errorMessage = nil
+
+        if settings.inputMode == .ai {
+            aiSessionContext = ContextProvider.shared.capture()
+        }
 
         overlay.showRecording(mode: settings.inputMode)
         logger.info("Aufnahme gestartet: Modus=\(self.settings.inputMode.rawValue, privacy: .public) Engine=\(self.settings.sttEngine.rawValue, privacy: .public)")
@@ -218,6 +279,19 @@ final class AppState: ObservableObject {
     }
 
     private func handleHotkeyRelease() async {
+        if settings.inputMode == .meeting {
+            guard isSessionActive else { return }
+            isSessionActive = false
+            overlay.setMeetingHotkeyPressed(false)
+
+            if MeetingSessionController.shared.isActive {
+                await stopMeeting()
+            } else {
+                await presentMeetingStartDialog()
+            }
+            return
+        }
+
         guard isSessionActive else { return }
 
         audioRecorder.stop()
@@ -236,6 +310,7 @@ final class AppState: ObservableObject {
             overlay.hideRecording()
             isSessionActive = false
             transcriber = nil
+            aiSessionContext = nil
             errorMessage = error.localizedDescription
             status = .error
             overlay.showAnswer("Fehler bei der Transkription: \(error.localizedDescription)")
@@ -250,6 +325,7 @@ final class AppState: ObservableObject {
 
         guard !transcript.isEmpty else {
             logger.info("Transkript leer → Abbruch")
+            aiSessionContext = nil
             status = .idle
             return
         }
@@ -269,51 +345,66 @@ final class AppState: ObservableObject {
         }
 
         guard settings.isActiveProviderConfigured else {
+            aiSessionContext = nil
             errorMessage = AuthError.notConfigured.localizedDescription
             status = .error
             overlay.showAnswer("Bitte hinterlege zuerst einen API-Key für \(settings.selectedProvider.displayName) in den Einstellungen – oder wechsle mit fn+Option in den Diktat-Modus.")
             return
         }
 
-        // Chat-Modus: Mehrturn-Dialog im Chat-Fenster.
-        if settings.inputMode == .chat {
+        // KI-Modus: Ein-Turn-Aktion am Cursor, Ergebnis einfügen oder im Chat anzeigen.
+        if settings.inputMode == .ai {
             status = .processing
-            logger.info("Chat-Nachricht (Sprache): Länge=\(transcript.count)")
+            logger.info("KI-Aktion an \(self.settings.selectedProvider.rawValue, privacy: .public) (\(self.settings.currentModelID, privacy: .public))…")
+            let context = aiSessionContext ?? ContextProvider.shared.capture()
+            aiSessionContext = nil
             do {
-                let context = ChatSessionController.shared.hasActiveSession ? nil : ContextProvider.shared.capture()
-                try await ChatSessionController.shared.send(text: transcript, context: context)
+                let client = LLMClientFactory.make(for: settings.selectedProvider)
+                let result = try await client.processAction(
+                    transcript: transcript,
+                    context: context,
+                    modelID: settings.currentModelID
+                )
+
+                let showInChat = context.selectedText.map { !$0.isEmpty } == true
+                    && !context.hasEditableInsertionPoint
+
+                if showInChat {
+                    ChatSessionController.shared.presentAIResult(
+                        instruction: transcript,
+                        result: result,
+                        context: context
+                    )
+                } else {
+                    try await OutputRouter.shared.route(.insertText(result))
+                    overlay.showInsertUndoToast {
+                        Task { @MainActor in
+                            await OutputRouter.shared.undoLastInsert()
+                        }
+                    }
+                }
                 status = .idle
             } catch {
-                logger.error("Chat-Fehler: \(error.localizedDescription, privacy: .public)")
+                aiSessionContext = nil
+                logger.error("KI-Fehler: \(error.localizedDescription, privacy: .public)")
                 errorMessage = error.localizedDescription
                 status = .error
+                overlay.showAnswer("Fehler: \(error.localizedDescription)")
             }
             return
         }
 
-        // KI-Modus: Transkript an die KI, die per Tool-Use über die Ausgabe entscheidet.
+        // Chat: Mehrturn-Dialog im Chat-Fenster.
         status = .processing
-        logger.info("KI-Anfrage an \(self.settings.selectedProvider.rawValue, privacy: .public) (\(self.settings.currentModelID, privacy: .public))…")
-
+        logger.info("Chat-Nachricht (Sprache): Länge=\(transcript.count)")
         do {
-            let context = ContextProvider.shared.capture()
-            let client = LLMClientFactory.make(for: settings.selectedProvider)
-            let action = try await client.processTranscript(
-                transcript: transcript,
-                context: context,
-                modelID: settings.currentModelID
-            )
-            switch action {
-            case .insertText: logger.info("KI-Antwort: insert_text → einfügen")
-            case .showAnswer: logger.info("KI-Antwort: show_answer → Fenster")
-            }
-            try await OutputRouter.shared.route(action)
+            let context = ChatSessionController.shared.hasActiveSession ? nil : ContextProvider.shared.capture()
+            try await ChatSessionController.shared.send(text: transcript, context: context)
             status = .idle
         } catch {
-            logger.error("Pipeline-Fehler: \(error.localizedDescription, privacy: .public)")
+            logger.error("Chat-Fehler: \(error.localizedDescription, privacy: .public)")
             errorMessage = error.localizedDescription
             status = .error
-            overlay.showAnswer("Fehler: \(error.localizedDescription)")
         }
     }
 
@@ -332,4 +423,76 @@ final class AppState: ObservableObject {
             self?.refreshPermissions()
         }
     }
+
+    func requestScreenCapturePermission() {
+        ScreenCapturePermissionService.requestPermission { [weak self] in
+            self?.refreshPermissions()
+        }
+    }
+
+    func requestSpeechPermission() {
+        SpeechPermissionService.requestPermission { [weak self] in
+            self?.refreshPermissions()
+        }
+    }
+
+    func startMeeting(title: String?) async {
+        guard !MeetingSessionController.shared.isActive else { return }
+
+        do {
+            let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let meetingTitle = (trimmed?.isEmpty == false) ? trimmed : nil
+            try await MeetingSessionController.shared.start(title: meetingTitle)
+            status = .idle
+        } catch {
+            errorMessage = error.localizedDescription
+            status = .error
+            overlay.showAnswer("Meeting konnte nicht gestartet werden: \(error.localizedDescription)")
+            if settings.inputMode == .meeting {
+                overlay.showMeetingModeIdle()
+            }
+        }
+    }
+
+    func stopMeeting() async {
+        guard MeetingSessionController.shared.isActive else { return }
+        status = .processing
+        await MeetingSessionController.shared.stop()
+        status = .idle
+        if settings.inputMode == .meeting {
+            overlay.showMeetingModeIdle()
+        }
+    }
+
+    private func presentMeetingStartDialog() async {
+        guard canStartMeeting else {
+            overlay.showAnswer("Für Meetings fehlen Berechtigungen. Prüfe Mikrofon und ggf. Bildschirmaufnahme in den Einstellungen.")
+            return
+        }
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            overlay.showMeetingStartSheet(
+                onStart: { [weak self] title in
+                    Task { @MainActor in
+                        await self?.startMeeting(title: title)
+                        continuation.resume()
+                    }
+                },
+                onCancel: {
+                    continuation.resume()
+                }
+            )
+        }
+    }
+
+    var canStartMeeting: Bool {
+        let source = settings.meetingAudioSource
+        if source.needsMicrophone, !microphoneGranted { return false }
+        if source.needsSystemAudio, !screenCaptureGranted { return false }
+        return true
+    }
+}
+
+extension Notification.Name {
+    static let samOnboardingCompleted = Notification.Name("samOnboardingCompleted")
 }

@@ -4,7 +4,7 @@ import SwiftUI
 
 /// App-Delegate: Menüleisten-Icon, zentriertes Glas-Settings-Panel, Onboarding.
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var onboardingWindow: NSWindow?
     private var statusItem: NSStatusItem?
     private var settingsPopover: NSPopover?
@@ -15,6 +15,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
         observeMenuBarIcon()
+        observeOnboardingDismissal()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOnboardingCompleted),
+            name: .samOnboardingCompleted,
+            object: nil
+        )
 
         Task { @MainActor in
             AppState.shared.bootstrap()
@@ -65,6 +73,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
 
+    private func observeOnboardingDismissal() {
+        AppState.shared.$showOnboarding
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] show in
+                guard !show else { return }
+                self?.closeOnboardingWindow()
+            }
+            .store(in: &cancellables)
+    }
+
+    @objc private func handleOnboardingCompleted() {
+        launchAtLoginService.enableByDefaultIfNeeded()
+    }
+
     private func updateMenuBarIcon(_ status: AppStatus) {
         guard let button = statusItem?.button else { return }
         let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
@@ -85,6 +107,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showStatusMenu(relativeTo button: NSStatusBarButton) {
         let menu = NSMenu()
+        if MeetingSessionController.shared.isActive {
+            let stopItem = NSMenuItem(
+                title: "Meeting beenden",
+                action: #selector(stopMeetingFromMenu),
+                keyEquivalent: ""
+            )
+            stopItem.target = self
+            menu.addItem(stopItem)
+            menu.addItem(.separator())
+        }
         let settingsItem = NSMenuItem(title: "Einstellungen…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -97,6 +129,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettingsFromMenu() {
         showSettingsPanel()
+    }
+
+    @objc private func stopMeetingFromMenu() {
+        Task { @MainActor in
+            await AppState.shared.stopMeeting()
+        }
     }
 
     @objc private func quitFromMenu() {
@@ -132,7 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeSettingsPopover() -> NSPopover {
         let popover = NSPopover()
         popover.contentSize = NSSize(width: SamDesign.panelWidth, height: SamDesign.panelHeight)
-        popover.behavior = .transient
+        popover.behavior = .applicationDefined
         popover.animates = true
         popover.contentViewController = NSHostingController(
             rootView: SettingsView(
@@ -181,10 +219,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = hosting
         window.center()
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
         onboardingWindow = window
         AppState.shared.showOnboarding = true
+    }
+
+    private func closeOnboardingWindow() {
+        onboardingWindow?.delegate = nil
+        onboardingWindow?.close()
+        onboardingWindow = nil
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window === onboardingWindow else { return }
+        onboardingWindow = nil
+        if AppState.shared.allRequiredPermissionsGranted {
+            AppState.shared.completeOnboarding()
+        } else {
+            AppState.shared.showOnboarding = false
+        }
     }
 }

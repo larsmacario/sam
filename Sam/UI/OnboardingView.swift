@@ -102,7 +102,7 @@ struct OnboardingView: View {
         case 1:
             appState.requestMicrophonePermission()
         case 2:
-            Task { _ = await SpeechTranscriber.requestPermission() }
+            appState.requestSpeechPermission()
         case 3:
             appState.requestAccessibilityPermission()
         default:
@@ -111,9 +111,7 @@ struct OnboardingView: View {
     }
 
     private func finish() {
-        settings.hasCompletedOnboarding = true
-        launchAtLoginService.enableByDefaultIfNeeded()
-        AppState.shared.restartHotkey()
+        appState.completeOnboarding()
         isPresented = false
     }
 }

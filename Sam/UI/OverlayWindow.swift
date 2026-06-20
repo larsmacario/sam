@@ -24,8 +24,174 @@ final class OverlayWindowController: ObservableObject {
     @Published var answerText = ""
     @Published var isAnswerVisible = false
     @Published var isChatVisible = false
+    @Published var isMeetingModeVisible = false
+    @Published var meetingTranscript = ""
+    @Published var meetingStatus: MeetingSessionStatus = .idle
+    @Published var meetingStart = Date()
+    @Published var meetingSummaryRecord: MeetingRecord?
+    @Published var isMeetingSummaryVisible = false
+    @Published var meetingHotkeyPressed = false
+
+    private var meetingPanel: NSPanel?
+    private var meetingSummaryPanel: NSPanel?
+    private var meetingStartPanel: NSPanel?
+    private var meetingStartHandler: ((String?) -> Void)?
+
+    private var insertUndoToastPanel: NSPanel?
+    private var insertUndoToastTask: Task<Void, Never>?
+    @Published var isInsertUndoToastVisible = false
 
     private init() {}
+
+    // MARK: - Meeting-Modus (Idle + Recording)
+
+    /// Dauerhafte Idle-Pille im Meeting-Modus (fn+⌘ zum Starten).
+    func showMeetingModeIdle() {
+        meetingTranscript = ""
+        meetingStatus = .idle
+        meetingHotkeyPressed = false
+        isMeetingModeVisible = true
+        presentMeetingPanel()
+    }
+
+    /// Aufnahme läuft – Timer, Waveform, Transkript.
+    func showMeetingRecording() {
+        meetingTranscript = ""
+        meetingStatus = .recording
+        meetingStart = Date()
+        meetingHotkeyPressed = false
+        isMeetingModeVisible = true
+        presentMeetingPanel()
+    }
+
+    func revertMeetingToIdle() {
+        meetingTranscript = ""
+        meetingStatus = .idle
+        meetingHotkeyPressed = false
+        if isMeetingModeVisible {
+            refreshMeetingContent()
+        }
+    }
+
+    func hideMeetingMode() {
+        isMeetingModeVisible = false
+        meetingHotkeyPressed = false
+        meetingPanel?.orderOut(nil)
+    }
+
+    func setMeetingHotkeyPressed(_ pressed: Bool) {
+        meetingHotkeyPressed = pressed
+        refreshMeetingContent()
+    }
+
+    func updateMeetingTranscript(_ text: String) {
+        meetingTranscript = text
+        refreshMeetingContent()
+    }
+
+    func updateMeetingStatus(_ status: MeetingSessionStatus) {
+        meetingStatus = status
+        refreshMeetingContent()
+    }
+
+    func showMeetingStartSheet(onStart: @escaping (String?) -> Void, onCancel: @escaping () -> Void) {
+        meetingStartHandler = onStart
+        hideMeetingStartSheet()
+
+        let view = MeetingStartSheetView(
+            onStart: { [weak self] title in
+                self?.hideMeetingStartSheet()
+                onStart(title)
+            },
+            onCancel: { [weak self] in
+                self?.hideMeetingStartSheet()
+                onCancel()
+            }
+        )
+
+        let panel = createKeyPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 280),
+            view: view
+        )
+        meetingStartPanel = panel
+        positionMeetingStartPanel(panel)
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+    }
+
+    func hideMeetingStartSheet() {
+        meetingStartPanel?.orderOut(nil)
+        meetingStartPanel = nil
+        meetingStartHandler = nil
+    }
+
+    private func positionMeetingStartPanel(_ panel: NSPanel) {
+        guard let screen = NSScreen.main else { return }
+        let screenFrame = screen.visibleFrame
+        let panelSize = panel.frame.size
+        let x = screenFrame.midX - panelSize.width / 2
+        let y = screenFrame.midY - panelSize.height / 2
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    func showMeetingSummary(record: MeetingRecord) {
+        meetingSummaryRecord = record
+        isMeetingSummaryVisible = true
+
+        if meetingSummaryPanel == nil {
+            meetingSummaryPanel = createPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+                view: MeetingSummaryPanelView(controller: self)
+            )
+        } else {
+            refreshMeetingSummaryContent()
+        }
+
+        positionMeetingSummaryPanel()
+        meetingSummaryPanel?.orderFrontRegardless()
+    }
+
+    func hideMeetingSummary() {
+        isMeetingSummaryVisible = false
+        meetingSummaryPanel?.orderOut(nil)
+    }
+
+    private func presentMeetingPanel() {
+        if meetingPanel == nil {
+            meetingPanel = createPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 420, height: 72),
+                view: MeetingPillView(controller: self),
+                hasShadow: false
+            )
+        } else {
+            refreshMeetingContent()
+        }
+        positionRecordingPanel(meetingPanel)
+        meetingPanel?.orderFrontRegardless()
+    }
+
+    private func refreshMeetingContent() {
+        guard let panel = meetingPanel else { return }
+        let hosting = NSHostingView(rootView: MeetingPillView(controller: self))
+        hosting.frame = panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 420, height: 72)
+        panel.contentView = hosting
+    }
+
+    private func refreshMeetingSummaryContent() {
+        guard let panel = meetingSummaryPanel else { return }
+        let hosting = NSHostingView(rootView: MeetingSummaryPanelView(controller: self))
+        hosting.frame = panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 480, height: 420)
+        panel.contentView = hosting
+    }
+
+    private func positionMeetingSummaryPanel() {
+        guard let panel = meetingSummaryPanel, let screen = NSScreen.main else { return }
+        let screenFrame = screen.visibleFrame
+        let panelSize = panel.frame.size
+        let x = screenFrame.midX - panelSize.width / 2
+        let y = screenFrame.midY - panelSize.height / 2
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
 
     // MARK: - Aufnahme-Pille
 
@@ -75,7 +241,7 @@ final class OverlayWindowController: ObservableObject {
         } else {
             refreshRecordingContent()
         }
-        positionRecordingPanel()
+        positionRecordingPanel(recordingPanel)
         recordingPanel?.orderFrontRegardless()
     }
 
@@ -104,6 +270,62 @@ final class OverlayWindowController: ObservableObject {
         answerPanel?.orderOut(nil)
     }
 
+    // MARK: - KI-Einfügen Toast (Rückgängig)
+
+    /// Kurzes Feedback nach KI-Einfügen; Klick auf „Rückgängig" simuliert Cmd+Z in der Ziel-App.
+    func showInsertUndoToast(onUndo: @escaping () -> Void) {
+        insertUndoToastTask?.cancel()
+        isInsertUndoToastVisible = true
+
+        if insertUndoToastPanel == nil {
+            insertUndoToastPanel = createPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 260, height: 52),
+                view: InsertUndoToastView(onUndo: { [weak self] in
+                    onUndo()
+                    self?.hideInsertUndoToast()
+                }),
+                hasShadow: false
+            )
+            insertUndoToastPanel?.acceptsMouseMovedEvents = true
+        } else {
+            refreshInsertUndoToastContent(onUndo: onUndo)
+        }
+
+        positionInsertUndoToastPanel()
+        insertUndoToastPanel?.orderFrontRegardless()
+
+        insertUndoToastTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.hideInsertUndoToast()
+        }
+    }
+
+    func hideInsertUndoToast() {
+        insertUndoToastTask?.cancel()
+        isInsertUndoToastVisible = false
+        insertUndoToastPanel?.orderOut(nil)
+    }
+
+    private func refreshInsertUndoToastContent(onUndo: @escaping () -> Void) {
+        guard let panel = insertUndoToastPanel else { return }
+        let hosting = NSHostingView(rootView: InsertUndoToastView(onUndo: { [weak self] in
+            onUndo()
+            self?.hideInsertUndoToast()
+        }))
+        hosting.frame = panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 260, height: 52)
+        panel.contentView = hosting
+    }
+
+    private func positionInsertUndoToastPanel() {
+        guard let panel = insertUndoToastPanel, let screen = NSScreen.main else { return }
+        let screenFrame = screen.visibleFrame
+        let panelSize = panel.frame.size
+        let x = screenFrame.midX - panelSize.width / 2
+        let y = screenFrame.minY + 108
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
     // MARK: - Chat-Fenster
 
     func showChat() {
@@ -119,7 +341,7 @@ final class OverlayWindowController: ObservableObject {
         }
 
         positionChatPanel()
-        chatPanel?.makeKeyAndOrderFront(nil)
+        chatPanel?.orderFrontRegardless()
     }
 
     func hideChat() {
@@ -144,7 +366,7 @@ final class OverlayWindowController: ObservableObject {
     private func createChatPanel<V: View>(contentRect: NSRect, view: V) -> NSPanel {
         let panel = NSPanel(
             contentRect: contentRect,
-            styleMask: [.borderless, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -155,9 +377,9 @@ final class OverlayWindowController: ObservableObject {
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = false
+        panel.becomesKeyOnlyIfNeeded = true
 
-        let hosting = NSHostingView(rootView: view)
+        let hosting = PassThroughHostingView(rootView: view)
         hosting.frame = NSRect(origin: .zero, size: contentRect.size)
         hosting.autoresizingMask = [.width, .height]
         panel.contentView = hosting
@@ -166,13 +388,7 @@ final class OverlayWindowController: ObservableObject {
     }
 
     private func chatPanelFrame(for screen: NSScreen) -> NSRect {
-        let visible = screen.visibleFrame
-        let width = SamDesign.chatPanelWidth
-        let height = visible.height * SamDesign.chatPanelHeightRatio
-        let inset = SamDesign.chatPanelScreenInset
-        let x = visible.maxX - width - inset
-        let y = visible.minY + (visible.height - height) / 2
-        return NSRect(x: x, y: y, width: width, height: height)
+        screen.visibleFrame
     }
 
     private func positionChatPanel() {
@@ -221,6 +437,29 @@ final class OverlayWindowController: ObservableObject {
         return panel
     }
 
+    private func createKeyPanel<V: View>(contentRect: NSRect, view: V, hasShadow: Bool = true) -> NSPanel {
+        let panel = KeyPanel(
+            contentRect: contentRect,
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = hasShadow
+        panel.hidesOnDeactivate = false
+        panel.becomesKeyOnlyIfNeeded = false
+
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = contentRect
+        panel.contentView = hosting
+
+        return panel
+    }
+
     private func refreshRecordingContent() {
         guard let panel = recordingPanel else { return }
         let hosting = NSHostingView(rootView: RecordingPillView(controller: self))
@@ -235,13 +474,14 @@ final class OverlayWindowController: ObservableObject {
         panel.contentView = hosting
     }
 
-    private func positionRecordingPanel() {
-        guard let panel = recordingPanel, let screen = NSScreen.main else { return }
+    private func positionRecordingPanel(_ panel: NSPanel? = nil) {
+        let target = panel ?? recordingPanel
+        guard let target, let screen = NSScreen.main else { return }
         let screenFrame = screen.visibleFrame
-        let panelSize = panel.frame.size
+        let panelSize = target.frame.size
         let x = screenFrame.midX - panelSize.width / 2
         let y = screenFrame.minY + 48
-        panel.setFrameOrigin(NSPoint(x: x, y: y))
+        target.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
     private func positionAnswerPanel() {
@@ -341,6 +581,45 @@ struct RecordingPillView: View {
     }
 }
 
+/// Toast nach KI-Einfügen: „Eingefügt · Rückgängig" (nicht-aktivierend, klickbar).
+struct InsertUndoToastView: View {
+    let onUndo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(SamDesign.success)
+
+            Text("Eingefügt")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white)
+
+            Text("·")
+                .foregroundStyle(.white.opacity(0.35))
+
+            Button(action: onUndo) {
+                Text("Rückgängig")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SamDesign.chatColor)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 44)
+        .background(
+            ZStack {
+                Capsule().fill(.ultraThinMaterial)
+                Capsule().fill(Color(red: 0.086, green: 0.086, blue: 0.094).opacity(0.72))
+            }
+            .environment(\.colorScheme, .dark)
+        )
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.35), radius: 16, x: 0, y: 8)
+        .frame(width: 260, height: 52)
+    }
+}
+
 /// Animierte „Listening"-Waveform – seismografisch wandernde Hülle plus Jitter.
 struct WaveformView: View {
     let color: Color
@@ -415,11 +694,7 @@ struct AnswerPanelView: View {
 
             // Antworttext
             ScrollView {
-                Text(controller.answerText)
-                    .font(.system(size: 14))
-                    .lineSpacing(2)
-                    .textSelection(.enabled)
-                    .foregroundStyle(.primary)
+                LinkifiedText(text: controller.answerText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
             }
@@ -466,6 +741,23 @@ struct ChatPanelView: View {
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+
+                chatCard
+                    .frame(width: SamDesign.chatPanelWidth)
+                    .frame(height: geo.size.height * SamDesign.chatPanelHeightRatio)
+                    .frame(maxHeight: .infinity, alignment: .center)
+                    .padding(.trailing, SamDesign.chatPanelScreenInset)
+            }
+        }
+        .onAppear { isInputFocused = true }
+    }
+
+    private var chatCard: some View {
         VStack(spacing: 0) {
             chatHeader
             Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5)
@@ -513,7 +805,6 @@ struct ChatPanelView: View {
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.28), radius: 24, x: -8, y: 0)
-        .onAppear { isInputFocused = true }
     }
 
     private var chatHeader: some View {
@@ -613,11 +904,11 @@ private struct ChatBubbleView: View {
             if isUser { Spacer(minLength: 48) }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
-                Text(message.content)
-                    .font(.system(size: 14))
-                    .lineSpacing(2)
-                    .textSelection(.enabled)
-                    .foregroundStyle(isUser ? .white : .primary)
+                LinkifiedText(
+                    text: message.content,
+                    baseColor: isUser ? .white : .primary,
+                    linkColor: isUser ? .white : SamDesign.accent
+                )
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background {
@@ -678,5 +969,268 @@ private struct ChatLoadingBubble: View {
     private func loadingOffset(for index: Int) -> CGFloat {
         let phase = Date.timeIntervalSinceReferenceDate * 3 + Double(index) * 0.4
         return CGFloat(sin(phase)) * 3
+    }
+}
+
+/// Volle Bildschirmbreite mit Klick-Durchreichung links vom Chat-Panel.
+/// Panel das Tastatureingabe akzeptiert (z. B. TextField im Start-Dialog).
+private final class KeyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
+private final class PassThroughHostingView<Content: View>: NSHostingView<Content> {
+    private var interactiveTrailingWidth: CGFloat {
+        SamDesign.chatPanelWidth + SamDesign.chatPanelScreenInset
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if point.x < bounds.width - interactiveTrailingWidth {
+            return nil
+        }
+        return super.hitTest(point)
+    }
+}
+
+/// Meeting-Pille: gleiches Layout wie `RecordingPillView` (Modus-Flash + Aufnahme).
+struct MeetingPillView: View {
+    @ObservedObject var controller: OverlayWindowController
+
+    private let mode = InputMode.meeting
+    private var color: Color { mode.accentColor }
+    private var isIdle: Bool { controller.meetingStatus == .idle }
+
+    private var statusSubtitle: String {
+        switch controller.meetingStatus {
+        case .transcribing: return "Transkribiere…"
+        case .summarizing: return "Fasse zusammen…"
+        case .recovering: return "Stelle wieder her…"
+        case .recording, .idle: return ""
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 13) {
+                iconBadge
+                if controller.meetingStatus == .recording {
+                    recordingContent
+                } else {
+                    statusContent
+                }
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 18)
+            .frame(height: 52)
+            .background(pillBackground)
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.40), radius: 20, x: 0, y: 12)
+            .fixedSize()
+        }
+        .frame(width: 420, height: 72)
+    }
+
+    private var recordingContent: some View {
+        HStack(spacing: 12) {
+            WaveformView(color: color)
+                .frame(width: 132)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(mode.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                if controller.meetingTranscript.isEmpty {
+                    PillTimerText(start: controller.meetingStart)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .monospacedDigit()
+                } else {
+                    Text(controller.meetingTranscript)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(1)
+                }
+            }
+            .frame(width: 82, alignment: .leading)
+        }
+    }
+
+    private var statusContent: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if isIdle {
+                Text("Modus")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.55))
+                Text(mode.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+            } else {
+                Text(mode.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(statusSubtitle)
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+            }
+        }
+        .padding(.trailing, 4)
+    }
+
+    private var iconBadge: some View {
+        ZStack {
+            Circle().fill(color)
+            Image(systemName: mode.pillSymbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: 30, height: 30)
+        .shadow(color: color.opacity(0.5), radius: 6, x: 0, y: 2)
+    }
+
+    private var pillBackground: some View {
+        ZStack {
+            Capsule().fill(.ultraThinMaterial)
+            Capsule().fill(Color(red: 0.086, green: 0.086, blue: 0.094).opacity(0.55))
+        }
+        .environment(\.colorScheme, .dark)
+    }
+}
+
+/// Zusammenfassung nach Meeting-Ende.
+struct MeetingSummaryPanelView: View {
+    @ObservedObject var controller: OverlayWindowController
+    @State private var copied = false
+
+    private var record: MeetingRecord? { controller.meetingSummaryRecord }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SamDesign.meetingColor)
+                Text(record?.title ?? "Meeting")
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                Spacer()
+                Button { controller.hideMeetingSummary() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .background(Color.primary.opacity(0.08), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if let summary = record?.summary, !summary.overview.isEmpty {
+                        summarySection(title: "Zusammenfassung", items: [summary.overview])
+                        if !summary.topics.isEmpty {
+                            summarySection(title: "Themen", items: summary.topics)
+                        }
+                        if !summary.decisions.isEmpty {
+                            summarySection(title: "Entscheidungen", items: summary.decisions)
+                        }
+                        if !summary.actionItems.isEmpty {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Action Items")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                ForEach(summary.actionItems) { item in
+                                    Text("• \(item.task)\(assigneeSuffix(item))")
+                                        .font(.system(size: 13))
+                                }
+                            }
+                        }
+                        if !summary.openQuestions.isEmpty {
+                            summarySection(title: "Offene Fragen", items: summary.openQuestions)
+                        }
+                    } else if let transcript = record?.fullTranscript, !transcript.isEmpty {
+                        Text(transcript)
+                            .font(.system(size: 13))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text("Kein Transkript vorhanden.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(16)
+            }
+
+            Rectangle().fill(Color.primary.opacity(0.08)).frame(height: 0.5)
+
+            HStack {
+                Spacer()
+                Button {
+                    let text = exportText()
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    copied = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        Text(copied ? "Kopiert" : "Kopieren")
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(SamDesign.accent)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+        }
+        .frame(width: 480, height: 420)
+        .background(VisualEffectBackground())
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .onChange(of: controller.meetingSummaryRecord?.id) { _, _ in copied = false }
+    }
+
+    private func summarySection(title: String, items: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+            ForEach(items, id: \.self) { item in
+                Text("• \(item)")
+                    .font(.system(size: 13))
+            }
+        }
+    }
+
+    private func assigneeSuffix(_ item: MeetingActionItem) -> String {
+        var parts: [String] = []
+        if let assignee = item.assignee, !assignee.isEmpty { parts.append(assignee) }
+        if let due = item.dueDate, !due.isEmpty { parts.append("bis \(due)") }
+        guard !parts.isEmpty else { return "" }
+        return " (\(parts.joined(separator: ", ")))"
+    }
+
+    private func exportText() -> String {
+        guard let record else { return "" }
+        var lines = [record.title, ""]
+        if let summary = record.summary {
+            lines.append(summary.overview)
+            lines.append("")
+            if !summary.actionItems.isEmpty {
+                lines.append("Action Items:")
+                for item in summary.actionItems {
+                    lines.append("- \(item.task)")
+                }
+            }
+        } else {
+            lines.append(record.fullTranscript)
+        }
+        return lines.joined(separator: "\n")
     }
 }

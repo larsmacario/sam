@@ -3,7 +3,7 @@ import os
 
 private let logger = Logger(subsystem: "de.larsmacario.sam", category: "OpenAIClient")
 
-/// OpenAI Chat Completions API mit Function Calling für Intent-Routing.
+/// OpenAI Chat Completions API für KI-Aktionen und Mehrturn-Chat.
 final class OpenAIClient: LLMProviding {
     private let authProvider: AuthProviding
     private let session: URLSession
@@ -27,12 +27,12 @@ final class OpenAIClient: LLMProviding {
         return response.choices.first?.message.content ?? "Verbindung OK"
     }
 
-    func processTranscript(
+    func processAction(
         transcript: String,
         context: SessionContext,
         modelID: String
-    ) async throws -> LLMOutputAction {
-        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
+    ) async throws -> String {
+        let systemPrompt = await MainActor.run { SamTools.resolvedActionSystemPrompt() }
         let body = ChatRequest(
             model: modelID,
             messages: [
@@ -41,26 +41,25 @@ final class OpenAIClient: LLMProviding {
             ],
             max_completion_tokens: 4096,
             tools: [
-                makeTool(name: SamTools.insertTextName, description: SamTools.insertTextDescription, argDescription: "Der einzufügende Text"),
-                makeTool(name: SamTools.showAnswerName, description: SamTools.showAnswerDescription, argDescription: "Die anzuzeigende Antwort")
+                makeInsertTool()
             ],
             tool_choice: .string("required")
         )
 
         let response: ChatResponse = try await send(body)
 
-        if let call = response.choices.first?.message.tool_calls?.first {
-            let text = decodeArgumentText(call.function.arguments)
-            if let text, let action = SamTools.action(forToolName: call.function.name, text: text) {
-                return action
-            }
+        if let call = response.choices.first?.message.tool_calls?.first,
+           call.function.name == SamTools.insertTextName,
+           let text = decodeArgumentText(call.function.arguments),
+           !text.isEmpty {
+            return text
         }
 
         if let content = response.choices.first?.message.content, !content.isEmpty {
-            return .showAnswer(content)
+            return content
         }
 
-        throw LLMError.noToolUse
+        throw LLMError.noActionOutput
     }
 
     func sendChat(
@@ -88,12 +87,31 @@ final class OpenAIClient: LLMProviding {
         throw LLMError.invalidResponse
     }
 
-    private func makeTool(name: String, description: String, argDescription: String) -> Tool {
+    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
+        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
+        let body = ChatRequest(
+            model: modelID,
+            messages: [
+                ChatMessage(role: "system", content: systemPrompt),
+                ChatMessage(role: "user", content: "Meeting-Transkript:\n\n\(transcript)")
+            ],
+            max_completion_tokens: 4096,
+            tools: nil,
+            tool_choice: nil
+        )
+        let response: ChatResponse = try await send(body)
+        guard let content = response.choices.first?.message.content, !content.isEmpty else {
+            throw LLMError.invalidResponse
+        }
+        return try SamMeeting.parseSummaryJSON(content)
+    }
+
+    private func makeInsertTool() -> Tool {
         Tool(function: FunctionDef(
-            name: name,
-            description: description,
+            name: SamTools.insertTextName,
+            description: SamTools.insertTextDescription,
             parameters: ParametersSchema(
-                properties: [SamTools.textArgName: PropertySchema(type: "string", description: argDescription)],
+                properties: [SamTools.textArgName: PropertySchema(type: "string", description: "Der einzufügende Text")],
                 required: [SamTools.textArgName]
             )
         ))

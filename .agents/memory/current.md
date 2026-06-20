@@ -1,19 +1,21 @@
 # Aktueller Stand
 
 ## Letzte Änderungen
-- **4-Tab-Einstellungen:** Start, Sprache, KI, Namen – Tab-Leiste mit vollflächigen Klickzielen.
-- **Eigennamen:** Dynamische Label/Wert-Liste in `SettingsStore`, KI-Prompts + UI personalisiert.
-- **Chat-Modus:** Mehrturn-Dialog im Sidepanel (`ChatSession`, `OverlayWindow`).
-- **Doku:** README, INSTALLATION, SECURITY, GITHUB_SETUP aktualisiert.
+- **Meeting-Modus (4. Modus):** fn+⌥ rotiert Diktat → KI → Chat → Meeting; fn+⌘ startet/stoppt Aufnahme; Start-Dialog mit Name + Zustimmung (`KeyPanel` für Tastatureingabe).
+- **Meeting-Pille:** Größe wie Diktat-Pille; Waveform nur während aktiver Aufnahme, Idle kompakt mit Text.
+- **Meeting-Historie:** JSON-Speicher in `MeetingStore`; Speicherordner wählbar unter Einstellungen → Meetings → Historie.
+- **Release** in `/Applications/SAM.app` installiert (13.06.2026).
 
 ## Fokus
-- Commit & Push der Feature-Änderungen; optional Release `v1.1.0` taggen.
+- Meeting-Flow manuell testen: Moduswechsel, Name eingeben, Aufnahme, Zusammenfassung, Ordnerwahl, Historie.
 
 ## Nächste Schritte
-1. Release taggen nach Push (`v1.1.0` mit Chat + Personalisierung).
-2. Manuell: Eigennamen + Tab-Navigation in installierter `/Applications/SAM.app` verifizieren.
+1. Commit & Push (Meeting-Modus, UI-Fixes, Speicherordner).
+2. Optional: bestehende Meetings beim Ordnerwechsel migrieren.
+3. Optional Release `v1.1.0` taggen.
 
 ## Offene Punkte
 - API-Keys in UserDefaults (nicht Keychain).
 - Keine Notarisierung → Gatekeeper-Warnung für Download-Nutzer.
-- Streaming, OAuth, Keychain-Migration offen.
+- Ordnerwechsel zeigt nur Meetings im neuen Ordner (keine automatische Migration).
+- Markdown-Links, Streaming, OAuth, Keychain-Migration offen.

@@ -18,7 +18,7 @@ Empfehlungen:
 
 ## Berechtigungen
 
-SAM benötigt Mikrofon, Spracherkennung und Bedienungshilfen. Audio wird für die Transkription verarbeitet. Bei der Apple-Engine und Whisper lokal bleibt die Verarbeitung auf dem Gerät. Whisper online und KI-Modus senden Daten an Cloud-APIs.
+SAM benötigt Mikrofon, Spracherkennung und Bedienungshilfen. Audio wird für die Transkription verarbeitet. Bei der Apple-Engine und Whisper lokal bleibt die Verarbeitung auf dem Gerät. Whisper online, KI- und Chat-Modus senden Daten an Cloud-APIs.
 
 ## Meldung von Schwachstellen
 

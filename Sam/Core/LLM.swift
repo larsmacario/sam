@@ -96,7 +96,7 @@ struct SamChatMessage: Identifiable, Sendable {
     }
 }
 
-// MARK: - Ausgabe-Aktion (Intent-Routing, provider-unabhängig)
+// MARK: - Ausgabe-Aktion (Diktat-Einfügen)
 
 enum LLMOutputAction: Sendable {
     case insertText(String)
@@ -109,7 +109,7 @@ enum LLMError: LocalizedError {
     case notConfigured
     case invalidResponse
     case apiError(status: Int, message: String)
-    case noToolUse
+    case noActionOutput
     case network(Error)
 
     var errorDescription: String? {
@@ -120,8 +120,8 @@ enum LLMError: LocalizedError {
             return "Ungültige Antwort vom KI-Anbieter."
         case .apiError(let status, let message):
             return "API-Fehler (\(status)): \(message)"
-        case .noToolUse:
-            return "Der KI-Anbieter hat keine Ausgabe-Aktion gewählt."
+        case .noActionOutput:
+            return "Der KI-Anbieter hat keinen Text zum Einfügen geliefert."
         case .network(let error):
             return "Netzwerkfehler: \(error.localizedDescription)"
         }
@@ -135,54 +135,76 @@ protocol LLMProviding: Sendable {
     /// Einfacher Verbindungstest.
     func testConnection(modelID: String) async throws -> String
 
-    /// Verarbeitet Transkript + Kontext und entscheidet via Tool-Use über die Ausgabe.
-    func processTranscript(
+    /// KI-Modus: Ein-Turn-Aktion am Cursor, Ergebnis als einzufügender Text.
+    func processAction(
         transcript: String,
         context: SessionContext,
         modelID: String
-    ) async throws -> LLMOutputAction
+    ) async throws -> String
 
-    /// Mehrturn-Chat ohne Tool-Use (Chat-Modus).
+    /// Mehrturn-Chat (Chat-Modus).
     func sendChat(
         messages: [SamChatMessage],
         initialContext: SessionContext?,
         modelID: String
     ) async throws -> String
+
+    /// Meeting-Zusammenfassung nach Stop.
+    func summarizeMeeting(
+        transcript: String,
+        modelID: String
+    ) async throws -> MeetingSummary
 }
 
-// MARK: - Geteilte Prompt-/Tool-Definitionen
+// MARK: - Geteilte Kontext-Hilfen
 
-/// SAMs logische Tools + System-Prompt, von allen Providern wiederverwendet.
-/// Jeder Client übersetzt diese in sein providerspezifisches Schema.
 enum SamTools {
     static let insertTextName = "insert_text"
-    static let insertTextDescription = "Transformierten Text ins aktive Textfeld einfügen."
-    static let showAnswerName = "show_answer"
-    static let showAnswerDescription = "Antwort im schwebenden Fenster anzeigen."
+    static let insertTextDescription = "Fertigen Text ins aktive Textfeld am Cursor einfügen."
     static let textArgName = "text"
 
-    static func systemPrompt(
+    static func actionSystemPrompt(
         assistantName: String = "SAM",
         userName: String = "Der Nutzer",
         properNames: [ProperNameEntry] = []
     ) -> String {
         var prompt = """
         Du bist \(assistantName), ein persönlicher Voice-Assistent auf macOS.
-        \(userName) hat gesprochen und du erhältst das Transkript sowie optional Kontext.
+        \(userName) gibt dir eine gesprochene ANWEISUNG. Führe genau diese Anweisung aus \
+        und liefere das fertige Ergebnis als einzufügenden Text.
 
-        Entscheide anhand der Nutzerabsicht:
-        - \(insertTextName): Wenn \(userName) Text umschreiben, übersetzen, korrigieren, formatieren \
-        oder in ein Textfeld einfügen möchte. Beispiele: "Übersetze das", "Mache das formeller", \
-        "Korrigiere den Text".
-        - \(showAnswerName): Wenn \(userName) eine Frage stellt oder eine Erklärung/Antwort erwartet, \
-        die nicht direkt eingefügt werden soll. Beispiele: "Was ist X?", "Erkläre mir Y".
+        Regeln:
+        1. Das Transkript ist die Anweisung – wiederhole oder zitiere sie nicht im Ergebnis.
+        2. Wenn markierter Text mitgeliefert wird, bearbeite ausschließlich diesen Inhalt \
+        (z. B. zusammenfassen, übersetzen, umformulieren, korrigieren). Das gilt auch für \
+        markierten Fließtext ohne Textfeld (Webseite, PDF, Mail-Lesebereich).
+        3. Ohne markierten Text erzeugst du neuen Inhalt am Cursor (z. B. E-Mail schreiben, \
+        Text verfassen, Antwort formulieren).
+        4. Liefere ausschließlich über das Tool \(insertTextName) – nur der fertige Text. \
+        Keine Erklärungen, keine Meta-Kommentare, kein Markdown, keine Anführungszeichen drumherum.
+        5. Sprache: Wenn die Anweisung eine Zielsprache nennt, verwende diese. Sonst behalte \
+        die Sprache des markierten Textes bei; ohne Markierung antworte auf Deutsch, sofern \
+        die Anweisung nichts anderes verlangt.
 
-        Wähle genau ein Tool und liefere den fertigen Text darin.
+        Beispiele:
+        - Anweisung „Schreibe mir folgende Mail …" → fertige E-Mail als Ergebnis.
+        - Anweisung „Fasse den Text zusammen" + markierter Text → Kurzfassung des markierten Textes.
+        - Anweisung „Übersetze ins Englische" + markierter Fließtext (Safari/PDF) → englische Übersetzung, nur der übersetzte Text.
         """
         if let block = properNamesPromptBlock(from: properNames) {
             prompt += "\n\n\(block)"
         }
         return prompt
+    }
+
+    @MainActor
+    static func resolvedActionSystemPrompt() -> String {
+        let settings = SettingsStore.shared
+        return actionSystemPrompt(
+            assistantName: settings.assistantDisplayName,
+            userName: settings.userDisplayName,
+            properNames: settings.validProperNames
+        )
     }
 
     static func properNamesPromptBlock(from entries: [ProperNameEntry]) -> String? {
@@ -193,35 +215,18 @@ enum SamTools {
         return "Bekannte Eigennamen:\n" + lines.joined(separator: "\n")
     }
 
-    @MainActor
-    static func resolvedSystemPrompt() -> String {
-        let settings = SettingsStore.shared
-        return systemPrompt(
-            assistantName: settings.assistantDisplayName,
-            userName: settings.userDisplayName,
-            properNames: settings.validProperNames
-        )
-    }
-
     /// Baut den User-Inhalt inkl. Kontext (App, markierter Text).
     static func userContent(transcript: String, context: SessionContext) -> String {
-        var content = "Transkript: \(transcript)"
+        var content = "Anweisung (gesprochen):\n\(transcript)"
         if let appName = context.frontmostAppName {
             content += "\n\nAktive App: \(appName)"
         }
         if let selected = context.selectedText, !selected.isEmpty {
-            content += "\n\nMarkierter Text:\n\(selected)"
+            content += "\n\nMarkierter Text (ausschließlich diesen Inhalt bearbeiten):\n\(selected)"
+        } else {
+            content += "\n\nMarkierter Text: (keiner – neuen Inhalt am Cursor erzeugen)"
         }
         return content
-    }
-
-    /// Normalisiert einen Tool-Call-Namen + Text zu einer Ausgabe-Aktion.
-    static func action(forToolName name: String, text: String) -> LLMOutputAction? {
-        switch name {
-        case insertTextName: return .insertText(text)
-        case showAnswerName: return .showAnswer(text)
-        default: return nil
-        }
     }
 }
 
@@ -261,6 +266,90 @@ enum SamChat {
             }
             return (message.role.apiRole, message.content)
         }
+    }
+}
+
+/// Meeting-Modus: strukturierte Zusammenfassung als JSON.
+enum SamMeeting {
+    static func systemPrompt(
+        assistantName: String = "SAM",
+        userName: String = "Der Nutzer",
+        properNames: [ProperNameEntry] = []
+    ) -> String {
+        var prompt = """
+        Du bist \(assistantName), ein Meeting-Assistent auf macOS.
+        \(userName) hat ein Gespräch aufgenommen. Erstelle eine präzise Zusammenfassung auf Deutsch.
+
+        Antworte ausschließlich mit gültigem JSON (kein Markdown, keine Erklärungen) in diesem Schema:
+        {
+          "suggestedTitle": "kurzer Meeting-Titel",
+          "overview": "3-5 Sätze Gesamtzusammenfassung",
+          "topics": ["Thema 1", "Thema 2"],
+          "decisions": ["Entscheidung 1"],
+          "actionItems": [{"task": "Aufgabe", "assignee": "Person oder null", "dueDate": "Datum oder null"}],
+          "openQuestions": ["Offene Frage 1"]
+        }
+        """
+        if let block = SamTools.properNamesPromptBlock(from: properNames) {
+            prompt += "\n\n\(block)"
+        }
+        return prompt
+    }
+
+    @MainActor
+    static func resolvedSystemPrompt() -> String {
+        let settings = SettingsStore.shared
+        return systemPrompt(
+            assistantName: settings.assistantDisplayName,
+            userName: settings.userDisplayName,
+            properNames: settings.validProperNames
+        )
+    }
+
+    static func parseSummaryJSON(_ text: String) throws -> MeetingSummary {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let jsonText: String
+        if trimmed.hasPrefix("```") {
+            jsonText = trimmed
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            jsonText = trimmed
+        }
+        guard let data = jsonText.data(using: .utf8) else {
+            throw LLMError.invalidResponse
+        }
+        let decoded = try JSONDecoder().decode(MeetingSummaryDTO.self, from: data)
+        return decoded.toSummary()
+    }
+}
+
+private struct MeetingSummaryDTO: Decodable {
+    struct ActionItemDTO: Decodable {
+        let task: String
+        let assignee: String?
+        let dueDate: String?
+    }
+
+    let suggestedTitle: String
+    let overview: String
+    let topics: [String]
+    let decisions: [String]
+    let actionItems: [ActionItemDTO]
+    let openQuestions: [String]
+
+    func toSummary() -> MeetingSummary {
+        MeetingSummary(
+            suggestedTitle: suggestedTitle,
+            overview: overview,
+            topics: topics,
+            decisions: decisions,
+            actionItems: actionItems.map {
+                MeetingActionItem(task: $0.task, assignee: $0.assignee, dueDate: $0.dueDate)
+            },
+            openQuestions: openQuestions
+        )
     }
 }
 

@@ -89,7 +89,9 @@ API-Keys erhältst du bei den Anbietern:
 - OpenAI: [platform.openai.com](https://platform.openai.com/api-keys)
 - Gemini: [aistudio.google.com](https://aistudio.google.com/app/apikey)
 
-**Chat-Modus:** Mit **fn + ⌥** bis zum Chat-Modus wechseln, dann **fn + ⌘** zum Sprechen oder im Chat-Fenster tippen.
+**KI-Modus:** Mit **fn + ⌥** zum KI-Modus wechseln, Text markieren oder Cursor setzen, dann **fn + ⌘** sprechen (z. B. „Übersetze ins Englische“) – Ergebnis wird am Cursor eingefügt.
+
+**Chat:** Mit **fn + ⌥** bis zum Chat-Modus wechseln, dann **fn + ⌘** zum Sprechen oder im Chat-Fenster tippen.
 
 ## Eigennamen anpassen (optional)
 

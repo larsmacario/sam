@@ -34,6 +34,7 @@ enum SamDesign {
     static let dictateColor = Color(hex: 0x0A84FF)
     static let chatColor = Color(hex: 0xBF5AF2)
     static let dialogColor = Color(hex: 0x64D2FF)
+    static let meetingColor = Color(hex: 0xFF453A)
     static let success = Color(hex: 0x30D158)
     static let warning = Color(hex: 0xFF9F0A)
 
@@ -256,6 +257,7 @@ extension InputMode {
         case .dictation: return SamDesign.dictateColor
         case .ai: return SamDesign.chatColor
         case .chat: return SamDesign.dialogColor
+        case .meeting: return SamDesign.meetingColor
         }
     }
 
@@ -264,14 +266,16 @@ extension InputMode {
         case .dictation: return "mic.fill"
         case .ai: return "sparkles"
         case .chat: return "bubble.left.and.bubble.right.fill"
+        case .meeting: return "person.3.fill"
         }
     }
 
     var pillHint: String {
         switch self {
         case .dictation: return "Sprich jetzt…"
-        case .ai: return "Frage stellen…"
+        case .ai: return "Aktion ausführen…"
         case .chat: return "Chat starten…"
+        case .meeting: return "fn+⌘ zum Starten"
         }
     }
 }

@@ -3,7 +3,7 @@ import os
 
 private let logger = Logger(subsystem: "de.larsmacario.sam", category: "ClaudeClient")
 
-/// Anthropic Messages API mit Tool-Use für Intent-Routing.
+/// Anthropic Messages API für KI-Aktionen und Mehrturn-Chat.
 final class ClaudeClient: LLMProviding {
     private let authProvider: AuthProviding
     private let session: URLSession
@@ -23,12 +23,12 @@ final class ClaudeClient: LLMProviding {
         return response.textContent ?? "Verbindung OK"
     }
 
-    func processTranscript(
+    func processAction(
         transcript: String,
         context: SessionContext,
         modelID: String
-    ) async throws -> LLMOutputAction {
-        let systemPrompt = await MainActor.run { SamTools.resolvedSystemPrompt() }
+    ) async throws -> String {
+        let systemPrompt = await MainActor.run { SamTools.resolvedActionSystemPrompt() }
         let body = MessagesRequest(
             model: modelID,
             max_tokens: 4096,
@@ -41,14 +41,6 @@ final class ClaudeClient: LLMProviding {
                         properties: [SamTools.textArgName: ToolProperty(type: "string", description: "Der einzufügende Text")],
                         required: [SamTools.textArgName]
                     )
-                ),
-                ToolDefinition(
-                    name: SamTools.showAnswerName,
-                    description: SamTools.showAnswerDescription,
-                    input_schema: ToolSchema(
-                        properties: [SamTools.textArgName: ToolProperty(type: "string", description: "Die anzuzeigende Antwort")],
-                        required: [SamTools.textArgName]
-                    )
                 )
             ],
             tool_choice: ToolChoice(type: "any"),
@@ -58,18 +50,18 @@ final class ClaudeClient: LLMProviding {
         let response: MessagesResponse = try await send(body)
 
         for block in response.content where block.type == "tool_use" {
-            if let name = block.name,
+            if block.name == SamTools.insertTextName,
                let text = block.input?[SamTools.textArgName]?.stringValue,
-               let action = SamTools.action(forToolName: name, text: text) {
-                return action
+               !text.isEmpty {
+                return text
             }
         }
 
         if let text = response.textContent, !text.isEmpty {
-            return .showAnswer(text)
+            return text
         }
 
-        throw LLMError.noToolUse
+        throw LLMError.noActionOutput
     }
 
     func sendChat(
@@ -93,6 +85,23 @@ final class ClaudeClient: LLMProviding {
             return text
         }
         throw LLMError.invalidResponse
+    }
+
+    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
+        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
+        let body = MessagesRequest(
+            model: modelID,
+            max_tokens: 4096,
+            system: systemPrompt,
+            tools: nil,
+            tool_choice: nil,
+            messages: [Message(role: "user", content: "Meeting-Transkript:\n\n\(transcript)")]
+        )
+        let response: MessagesResponse = try await send(body)
+        guard let text = response.textContent, !text.isEmpty else {
+            throw LLMError.invalidResponse
+        }
+        return try SamMeeting.parseSummaryJSON(text)
     }
 
     private func send<T: Decodable>(_ body: MessagesRequest) async throws -> T {

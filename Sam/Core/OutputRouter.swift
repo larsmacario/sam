@@ -40,6 +40,16 @@ final class OutputRouter {
         try await insertText(text)
     }
 
+    /// Simuliert Cmd+Z in der fokussierten App (Rückgängig nach KI-Einfügen).
+    func undoLastInsert() async {
+        guard AXIsProcessTrusted() else {
+            logger.warning("Rückgängig übersprungen: Accessibility fehlt")
+            return
+        }
+        let undone = simulateUndo()
+        logger.info("Rückgängig simuliert: \(undone, privacy: .public)")
+    }
+
     private func insertText(_ text: String) async throws {
         guard AXIsProcessTrusted() else {
             throw OutputRouterError.accessibilityRequired
@@ -65,12 +75,20 @@ final class OutputRouter {
     }
 
     private func simulatePaste() -> Bool {
+        simulateKeyCombo(virtualKey: CGKeyCode(kVK_ANSI_V))
+    }
+
+    private func simulateUndo() -> Bool {
+        simulateKeyCombo(virtualKey: CGKeyCode(kVK_ANSI_Z))
+    }
+
+    private func simulateKeyCombo(virtualKey: CGKeyCode) -> Bool {
         let source = CGEventSource(stateID: .hidSystemState)
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: virtualKey, keyDown: true)
         keyDown?.flags = .maskCommand
         keyDown?.post(tap: .cghidEventTap)
 
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: virtualKey, keyDown: false)
         keyUp?.flags = .maskCommand
         keyUp?.post(tap: .cghidEventTap)
 

@@ -1,32 +1,33 @@
 import AppKit
-import ApplicationServices
+import CoreGraphics
+import Foundation
 
-/// Accessibility-Berechtigung für globale Hotkeys und Text-Einfügen.
+/// Bildschirmaufnahme-Berechtigung für System-Audio (ScreenCaptureKit).
 @MainActor
-enum AccessibilityPermissionService {
+enum ScreenCapturePermissionService {
     private static var hasPromptedThisSession = false
 
-    nonisolated static func currentStatus() -> Bool {
-        AXIsProcessTrusted()
+    nonisolated static var hasPermission: Bool {
+        CGPreflightScreenCaptureAccess()
     }
 
     static func openSystemSettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else {
             return
         }
         NSWorkspace.shared.open(url)
     }
 
-    /// Erster Klick: nur macOS-Systemdialog. Erneuter Klick: nur Systemeinstellungen (nicht beides gleichzeitig).
+    /// Erster Klick: nur macOS-Systemdialog. Erneuter Klick: nur Systemeinstellungen.
     static func requestPermission(onRefresh: (@MainActor () -> Void)? = nil) {
-        if currentStatus() {
+        if hasPermission {
             onRefresh?()
             return
         }
 
         if !hasPromptedThisSession {
             hasPromptedThisSession = true
-            _ = checkTrusted(prompt: true)
+            _ = CGRequestScreenCaptureAccess()
         } else {
             openSystemSettings()
         }
@@ -42,10 +43,5 @@ enum AccessibilityPermissionService {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             onRefresh()
         }
-    }
-
-    nonisolated private static func checkTrusted(prompt: Bool) -> Bool {
-        let options = ["AXTrustedCheckOptionPrompt": prompt] as CFDictionary
-        return AXIsProcessTrustedWithOptions(options)
     }
 }
