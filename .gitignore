@@ -25,6 +25,14 @@ xcuserdata/
 .env
 *.local
 
+# Python / lokale Tools
+.venv/
+__pycache__/
+*.pyc
+
+# Agent-Kontext (optional, nicht für Releases nötig)
+.agents/
+
 # Build artifacts
 .build/
 DerivedData/

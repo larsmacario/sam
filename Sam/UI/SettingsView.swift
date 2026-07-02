@@ -448,9 +448,9 @@ struct SettingsView: View {
     }
 
     private func saveAPIKey() {
-        settings.saveAPIKey(apiKeyInput, for: provider)
+        let ok = settings.saveAPIKey(apiKeyInput, for: provider)
         apiKeyInput = ""
-        saveMessage = "API-Key gespeichert."
+        saveMessage = ok ? "API-Key gespeichert." : "Fehler: Keychain-Speicherung fehlgeschlagen."
     }
 
     private func deleteAPIKey() {

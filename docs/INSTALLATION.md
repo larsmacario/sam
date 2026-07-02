@@ -1,30 +1,33 @@
 # SAM installieren (ohne Xcode)
 
-Diese Anleitung richtet sich an Nutzer **ohne Programmierkenntnisse**. Du brauchst nur einen Browser und den Finder.
+Diese Anleitung richtet sich an Nutzer **ohne Programmierkenntnisse**. Du brauchst nur einen Browser und den Finder – **kein Xcode**, **keinen Apple-Developer-Account** und **keinen Account beim SAM-Entwickler**.
 
-## Voraussetzungen
+## Was du brauchst – und was nicht
 
-- Mac mit **macOS 15 (Sequoia)** oder neuer
-- Internetverbindung (nur zum Download der App)
+| Brauchst du | Brauchst du nicht |
+|---|---|
+| Mac mit **macOS 15 (Sequoia)** oder neuer | Xcode |
+| Internet (nur zum Download) | Apple Developer Account |
+| Optional: API-Key für KI-Modus | API-Key für Diktat (funktioniert ohne) |
 
 ## Installation in 3 Schritten
 
 ### Schritt 1: App herunterladen
 
-1. Öffne die GitHub-Seite von SAM.
-2. Klicke rechts auf **Releases** (oder den Link „Latest release").
-3. Lade die Datei **`SAM.zip`** der neuesten Version herunter (z. B. `v1.0.0`).
+1. Öffne **[github.com/larsmacario/sam/releases](https://github.com/larsmacario/sam/releases)**.
+2. Wähle die **neueste Version** (z. B. `v1.0.0`).
+3. Lade die Datei **`SAM.zip`** herunter.
 
 ### Schritt 2: App installieren
 
 1. Öffne die heruntergeladene ZIP-Datei (Doppelklick).
-2. Ziehe **`SAM.app`** in den Ordner **Programme** (Finder → Programme, oder `/Applications`).
+2. Ziehe **`SAM.app`** in den Ordner **Programme** (Finder → Programme).
 
 > **Tipp:** SAM sollte in **Programme** liegen, damit „Beim Anmelden starten" und die Bedienungshilfen-Freigabe zuverlässig funktionieren.
 
 ### Schritt 3: App zum ersten Mal öffnen
 
-macOS warnt beim ersten Start bei Apps, die nicht vom App Store kommen. Das ist normal.
+SAM kommt nicht aus dem Mac App Store. macOS warnt deshalb beim ersten Start – das ist **normal**.
 
 **So umgehst du die Warnung:**
 
@@ -42,7 +45,7 @@ Diesen Schritt musst du nur **einmal** machen. Danach startet SAM wie jede ander
 SAM führt dich durch ein kurzes Onboarding. Erlaube nacheinander:
 
 | Berechtigung | Wofür |
-|--------------|-------|
+|---|---|
 | **Mikrofon** | Sprache aufnehmen |
 | **Spracherkennung** | Sprache in Text umwandeln (läuft lokal auf deinem Mac) |
 | **Bedienungshilfen** | Globaler Hotkey und Texteinfügen in andere Apps |
@@ -61,22 +64,22 @@ SAM startet im **Diktat-Modus**. Damit kannst du **ohne API-Key** sofort testen:
 3. Sprich deinen Text.
 4. Lasse die Tasten los → der Text wird eingefügt.
 
-**Modus wechseln:** **fn + ⌥** tippen (Fallback: **rechte ⌥**) rotiert durch Diktat, KI und Chat.
+**Modus wechseln:** **fn + ⌥** tippen (Fallback: **rechte ⌥**) wechselt zwischen **Diktat** und **KI**.
 
 ## Einstellungen
 
 Klicke auf das **SAM-Symbol** in der Menüleiste. Das Panel hat vier Tabs:
 
 | Tab | Wofür |
-|-----|-------|
+|---|---|
 | **Start** | Autostart, aktiver Modus, Tastenkürzel, Berechtigungen |
 | **Sprache** | Spracherkennungs-Engine und Transkriptionssprache |
 | **KI** | Anbieter, Modell und API-Key |
 | **Namen** | Eigennamen für Personalisierung |
 
-## KI- und Chat-Modus einrichten (optional)
+## KI-Modus einrichten (optional)
 
-Für Antworten von Claude, OpenAI oder Gemini:
+Für KI-Aktionen am Cursor oder den Mehrturn-Chat brauchst du einen **eigenen API-Key** – das ist kein Developer-Account, sondern ein Zugang beim KI-Anbieter:
 
 1. Klicke auf das **SAM-Symbol** in der Menüleiste.
 2. Wechsle zum Tab **KI**.
@@ -89,9 +92,10 @@ API-Keys erhältst du bei den Anbietern:
 - OpenAI: [platform.openai.com](https://platform.openai.com/api-keys)
 - Gemini: [aistudio.google.com](https://aistudio.google.com/app/apikey)
 
-**KI-Modus:** Mit **fn + ⌥** zum KI-Modus wechseln, Text markieren oder Cursor setzen, dann **fn + ⌘** sprechen (z. B. „Übersetze ins Englische“) – Ergebnis wird am Cursor eingefügt.
+**KI-Modus nutzen:**
 
-**Chat:** Mit **fn + ⌥** bis zum Chat-Modus wechseln, dann **fn + ⌘** zum Sprechen oder im Chat-Fenster tippen.
+- **Ein-Turn-Aktion:** Mit **fn + ⌥** zum KI-Modus wechseln, Text markieren oder Cursor setzen, dann **fn + ⌘** sprechen (z. B. „Übersetze ins Englische") – Ergebnis wird eingefügt.
+- **Mehrturn-Chat:** Im KI-Modus **fn + ⌘** sprechen oder im Chat-Fenster tippen – SAM erkennt automatisch, ob eine Cursor-Aktion oder ein Dialog gemeint ist.
 
 ## Eigennamen anpassen (optional)
 

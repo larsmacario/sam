@@ -4,96 +4,164 @@
 
 SAM läuft als **Menüleisten-App** (kein Dock-Icon), startet optional beim Anmelden und bleibt immer im Hintergrund bereit.
 
+---
+
+## Für Nutzer: Installation ohne Entwickler-Konto
+
+Du brauchst **kein Xcode**, **keinen Apple-Developer-Account** und **keine Programmierkenntnisse**. Ein normaler Mac mit macOS 15 oder neuer reicht.
+
+| Brauchst du | Brauchst du nicht |
+|---|---|
+| Mac mit **macOS 15 (Sequoia)** oder neuer | Xcode |
+| Download von **GitHub Releases** | Apple Developer Account ($99/Jahr) |
+| Einmalig **Rechtsklick → Öffnen** (siehe unten) | API-Key (nur für KI-Modus nötig) |
+| Optional: eigener **API-Key** für KI-Funktionen | Account beim SAM-Entwickler |
+
+> **Ausführliche Anleitung mit Screenshots-Hinweisen:** [docs/INSTALLATION.md](docs/INSTALLATION.md)
+
+### Schritt 1: App herunterladen
+
+1. Öffne **[github.com/larsmacario/sam/releases](https://github.com/larsmacario/sam/releases)**
+2. Wähle die **neueste Version** (z. B. `v1.0.0`)
+3. Lade **`SAM.zip`** herunter
+
+### Schritt 2: Installieren
+
+1. Doppelklick auf `SAM.zip` → ZIP entpackt sich
+2. Ziehe **`SAM.app`** in den Ordner **Programme** (Finder → Programme)
+
+> SAM sollte in **Programme** liegen – das ist wichtig für Autostart und die Bedienungshilfen-Freigabe.
+
+### Schritt 3: Zum ersten Mal öffnen
+
+SAM kommt nicht aus dem Mac App Store. macOS zeigt deshalb beim ersten Start eine Sicherheitswarnung – das ist **normal** und kein Zeichen für Schadsoftware.
+
+**So öffnest du SAM trotzdem:**
+
+1. Gehe zu **Programme**
+2. **Rechtsklick** (oder Ctrl+Klick) auf **SAM**
+3. Wähle **Öffnen** – nicht Doppelklick
+4. Im Dialog erneut auf **Öffnen** klicken
+
+Diesen Schritt brauchst du nur **einmal**. Danach startet SAM wie jede andere App per Doppelklick.
+
+**Falls kein Dialog erscheint:** Systemeinstellungen → Datenschutz & Sicherheit → unten bei SAM auf **Trotzdem öffnen** klicken.
+
+### Schritt 4: Berechtigungen erteilen
+
+SAM führt dich durch ein kurzes Onboarding. Erlaube nacheinander:
+
+| Berechtigung | Wofür |
+|---|---|
+| **Mikrofon** | Sprache aufnehmen |
+| **Spracherkennung** | Sprache in Text umwandeln (läuft lokal auf deinem Mac) |
+| **Bedienungshilfen** | Globaler Hotkey und Texteinfügen in andere Apps |
+
+Fehlt eine Freigabe: **Systemeinstellungen → Datenschutz & Sicherheit** → Mikrofon, Spracherkennung oder Bedienungshilfen → SAM aktivieren.
+
+### Schritt 5: Sofort testen (ohne API-Key)
+
+SAM startet im **Diktat-Modus**. Damit kannst du **ohne API-Key und ohne Cloud** sofort loslegen:
+
+1. Öffne eine App mit Textfeld (Notizen, Mail, …)
+2. Halte **fn + ⌘** gedrückt (Fallback: **rechte ⌘**)
+3. Sprich deinen Text
+4. Lasse die Tasten los → der Text wird eingefügt
+
+**Modus wechseln:** **fn + ⌥** tippen (Fallback: **rechte ⌥**) wechselt zwischen **Diktat** und **KI**.
+
+### Schritt 6: KI-Modus einrichten (optional)
+
+Für KI-Aktionen (übersetzen, umformulieren, E-Mails schreiben) oder den Mehrturn-Chat brauchst du einen **eigenen API-Key** bei einem Anbieter deiner Wahl:
+
+1. Klicke auf das **SAM-Symbol** in der Menüleiste
+2. Wechsle zum Tab **KI**
+3. Wähle einen **Anbieter** und trage deinen **API-Key** ein
+4. Klicke **Schlüssel testen**
+
+| Anbieter | API-Key erstellen |
+|---|---|
+| Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+
+Das ist **kein Developer-Account** – nur ein kostenpflichtiger oder kostenloser Zugang beim jeweiligen KI-Anbieter. API-Kosten trägst du selbst.
+
+---
+
 ## Funktionen
 
 - **Push-to-talk:** fn + ⌘ halten, sprechen, loslassen
-- **Vier Modi:** Diktat, KI, Chat, Meeting (fn + ⌥ zum Wechseln)
-- **Meeting-Modus:** fn + ⌘ startet/stoppt Aufnahme mit Transkript und KI-Zusammenfassung
+- **Zwei Modi:** Diktat und KI (fn + ⌥ zum Wechseln)
 - **Drei STT-Engines:** Apple on-device (live), Whisper lokal (offline), Whisper online (OpenAI)
 - **Drei KI-Anbieter:** Claude, OpenAI, Gemini – frei wählbar
 - **Personalisierung:** Eigennamen (Assistent, Nutzer, Firma, Aussprache …) in den Einstellungen – fließen in KI-Prompts und UI
-
-## Schnellstart (ohne Xcode)
-
-> Ausführliche Schritt-für-Schritt-Anleitung: [docs/INSTALLATION.md](docs/INSTALLATION.md)
-
-1. Unter **[Releases](https://github.com/larsmacario/sam/releases)** die neueste `SAM.zip` herunterladen
-2. `SAM.app` nach **Programme** ziehen
-3. **Rechtsklick → Öffnen** (einmalig wegen macOS Gatekeeper)
-4. Onboarding durchlaufen – **Diktat-Modus** sofort ohne API-Key testen
-
-### Gatekeeper-Hinweis
-
-SAM ist nicht notarisiert (kein App-Store-Build). Beim ersten Start zeigt macOS eine Sicherheitswarnung. **Rechtsklick → Öffnen** umgeht das einmalig. Danach startet SAM normal per Doppelklick.
-
-## Voraussetzungen
-
-| | Nutzer (Release) | Entwickler (Quellcode) |
-|---|---|---|
-| macOS | 15 (Sequoia) oder neuer | 15 oder neuer |
-| Xcode | nicht nötig | 16+ (Swift 6) |
-| API-Key | nur für KI- und Chat-Modus | nur für KI- und Chat-Modus |
-
-**Diktat-Modus** funktioniert ohne API-Key und ohne Cloud – nur lokale Spracherkennung.
 
 ## Nutzung
 
 ### Tastenkürzel
 
 | Aktion | Tastenkombination | Fallback |
-|--------|-------------------|----------|
+|---|---|---|
 | Aufnehmen (halten) | fn + ⌘ | rechte ⌘ |
 | Modus wechseln (tippen) | fn + ⌥ | rechte ⌥ |
-| Meeting starten/stoppen | fn + ⌘ (im Meeting-Modus) | — |
 
 ### Modi
 
 - **Diktat:** Sprache → Text wird direkt ins aktive Feld eingefügt. Kein KI-Aufruf, kein API-Key.
-- **KI:** Sprache → KI führt eine Handlung am Cursor aus (übersetzen, E-Mail schreiben, umformulieren) und fügt das Ergebnis ein.
-- **Chat:** Sprache oder Text → Mehrturn-Dialog im Chat-Fenster; Nachfragen per Textfeld oder fn+⌘.
-- **Meeting:** fn+⌥ wählt den Modus (Idle-Pille erscheint). fn+⌘ startet nach Zustimmungshinweis und optionalem Namen die Aufnahme; fn+⌘ erneut beendet das Meeting. Transkript und Zusammenfassung in den Einstellungen unter **Meetings**.
+- **KI:** Sprache oder Text → je nach Kontext:
+  - **Ein-Turn-Aktion** am Cursor (Text markiert oder Cursor gesetzt): z. B. „Übersetze ins Englische" → Ergebnis wird eingefügt
+  - **Mehrturn-Chat** im Chat-Fenster: Nachfragen per Textfeld oder fn+⌘
 
 ### Einstellungen öffnen
 
-Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel hat **fünf Tabs**:
+Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel hat **vier Tabs**:
 
 | Tab | Inhalt |
-|-----|--------|
+|---|---|
 | **Start** | Status, Eingabemodus, Tastenkürzel, Berechtigungen, Autostart |
 | **Sprache** | STT-Engine, Whisper-Modell, Transkriptionssprache |
 | **KI** | Anbieter, Modell-ID, API-Key, Verbindungstest |
-| **Meetings** | Audio-Quelle, Chunk-Intervall, Meeting-Historie |
 | **Namen** | Eigennamen-Liste (Label + Wert) für Personalisierung |
 
-**Eigennamen:** Beliebig viele Einträge mit Bezeichnung und Wert – z. B. „Assistentenname“, „Dein Name“, „Firmenname“, „Aussprache“. Der Eintrag **Assistentenname** steuert die Anzeige in Chat- und Antwort-Fenstern; **Dein Name** wird in KI-Prompts verwendet. Alle gültigen Einträge werden der KI als Kontext mitgegeben.
+**Eigennamen:** Beliebig viele Einträge mit Bezeichnung und Wert – z. B. „Assistentenname", „Dein Name", „Firmenname", „Aussprache". Der Eintrag **Assistentenname** steuert die Anzeige in Chat- und Antwort-Fenstern; **Dein Name** wird in KI-Prompts verwendet.
 
 ### Spracherkennung (STT)
 
 | Engine | Beschreibung |
-|--------|--------------|
+|---|---|
 | Apple on-device | Standard, Live-Text während des Sprechens |
 | Whisper lokal | Offline via WhisperKit, Modell-Download beim ersten Start |
 | Whisper online | OpenAI-Transkriptions-API, nutzt OpenAI-API-Key |
 
-### KI-Anbieter
+## Fehlerbehebung
 
-| Anbieter | API-Key erstellen |
-|----------|-------------------|
-| Claude (Anthropic) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| OpenAI | [platform.openai.com](https://platform.openai.com/api-keys) |
-| Gemini (Google) | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+| Problem | Lösung |
+|---|---|
+| „SAM kann nicht geöffnet werden" / Gatekeeper-Warnung | Rechtsklick → Öffnen (siehe Schritt 3 oben) |
+| fn-Taste reagiert nicht | Fallback: **rechte ⌘** halten (Aufnahme), **rechte ⌥** tippen (Modus) |
+| Hotkey / Einfügen funktioniert nicht | Bedienungshilfen-Freigabe prüfen; SAM in Programme legen |
+| „Kein API-Key" im KI-Modus | API-Key unter Tab **KI** hinterlegen oder mit fn+⌥ in Diktat wechseln |
+| Tab in Einstellungen reagiert nicht | App neu starten; SAM sollte in Programme liegen |
+| Whisper lokal hängt | Erster Start lädt das Modell (~500 MB für „small") – warten |
+| Autostart funktioniert nicht | SAM muss in Programme liegen |
 
-## Erststart & Berechtigungen
+## Bekannte Einschränkungen
 
-SAM benötigt drei Berechtigungen (Onboarding führt dich durch):
+- **API-Keys** werden in der macOS-Keychain gespeichert; **Eigennamen** in UserDefaults (nur lokal auf deinem Mac).
+- **Keine Notarisierung** in v1 – einmalige Gatekeeper-Warnung beim ersten Öffnen (Rechtsklick → Öffnen). Maintainer: optionale Signierung siehe [docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md).
+- **Streaming** von KI-Antworten ist nicht implementiert (Request/Response).
+- **Modell-IDs** können sich ändern, wenn Anbieter ihre APIs aktualisieren – in den Einstellungen anpassbar.
 
-1. **Mikrofon** – Sprachaufnahme
-2. **Spracherkennung** – lokale Transkription
-3. **Bedienungshilfen** – globaler Hotkey und Texteinfügen
+---
 
-Falls eine Freigabe fehlt, öffne **Systemeinstellungen → Datenschutz & Sicherheit** und aktiviere SAM unter Mikrofon, Spracherkennung und Bedienungshilfen.
+## Für Entwickler: Installation aus Quellcode
 
-## Installation aus Quellcode (Entwickler)
+| | Nutzer (Release) | Entwickler (Quellcode) |
+|---|---|---|
+| macOS | 15 (Sequoia) oder neuer | 15 oder neuer |
+| Xcode | nicht nötig | 16+ (Swift 6) |
+| API-Key | nur für KI-Modus | nur für KI-Modus |
 
 ```bash
 git clone https://github.com/larsmacario/sam.git
@@ -124,26 +192,7 @@ xcodegen generate
 
 - [WhisperKit](https://github.com/argmaxinc/WhisperKit) 1.0.0 (Swift Package Manager, automatisch via Xcode)
 
-## Fehlerbehebung
-
-| Problem | Lösung |
-|---------|--------|
-| fn-Taste reagiert nicht | Fallback: **rechte ⌘** halten (Aufnahme), **rechte ⌥** tippen (Modus) |
-| Hotkey / Einfügen funktioniert nicht | Bedienungshilfen-Freigabe prüfen; SAM in `/Applications` legen |
-| „Kein API-Key" im KI-/Chat-Modus | API-Key unter Tab **KI** hinterlegen oder mit fn+⌥ in Diktat wechseln |
-| Tab in Einstellungen reagiert nicht | App neu starten; SAM sollte in `/Applications` liegen |
-| Whisper lokal hängt | Erster Start lädt das Modell (~500 MB für „small") – warten |
-| Autostart funktioniert nicht | SAM muss in `/Applications` liegen |
-| Gatekeeper blockiert App | Rechtsklick → Öffnen (siehe Schnellstart) |
-
-## Bekannte Einschränkungen
-
-- **API-Keys und Eigennamen** werden lokal in UserDefaults gespeichert (nur auf deinem Mac, nicht im Keychain). Keychain-Speicherung ist für eine spätere Version geplant.
-- **Keine Notarisierung** in v1 – einmalige Gatekeeper-Warnung beim ersten Öffnen.
-- **Streaming** von KI-Antworten ist nicht implementiert (Request/Response).
-- **Modell-IDs** können sich ändern, wenn Anbieter ihre APIs aktualisieren – in den Einstellungen anpassbar.
-
-## Projektstruktur
+### Projektstruktur
 
 ```
 Sam/
@@ -175,7 +224,7 @@ Nach dem ersten Push: Repo-Beschreibung und Topics setzen – siehe [docs/GITHUB
 
 MIT – siehe [LICENSE](LICENSE).
 
-SAM ist ein unabhängiges Open-Source-Projekt. Keine offizielle Partnerschaft mit Anthropic, OpenAI oder Google. API-Kosten trägt der Nutzer selbst.
+SAM ist ein unabhängiges Open-Source-Projekt. Keine offizielle Partnerschaft mit Anthropic, OpenAI oder Google.
 
 ## Sicherheit
 

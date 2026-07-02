@@ -25,6 +25,7 @@
 		43A969A779B1045E171DBBBF /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494AF1690E0705EE0D68562 /* SettingsView.swift */; };
 		4F0EC6AD8CC0699FF4A45D87 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E1EDCE6548AF0C4B1D638D /* LLM.swift */; };
 		5BF14E6E05F2F58C2CF579ED /* OpenAIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099D3813F91D5306F1C779D8 /* OpenAIClient.swift */; };
+		5FB7CD83A417D898C9452F0C /* APIKeyKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */; };
 		66126BDB1D0E2F765ADE41D9 /* STTEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62F24AF3FA0740BB221DE7C /* STTEngine.swift */; };
 		66A68094D783D17F9225961B /* AccessibilityPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1098985F367558826BFAE8C6 /* AccessibilityPermissionService.swift */; };
 		7365F1F7C01BD7C0E658D2FC /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE89EEFCF12BBB275C0F191 /* OnboardingView.swift */; };
@@ -55,6 +56,7 @@
 		1098985F367558826BFAE8C6 /* AccessibilityPermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPermissionService.swift; sourceTree = "<group>"; };
 		15B2560E5B4B255674AF4481 /* SpeechTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriber.swift; sourceTree = "<group>"; };
 		275FBE6D05BA9F6DD7C87B2C /* SamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamApp.swift; sourceTree = "<group>"; };
+		2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyKeychain.swift; sourceTree = "<group>"; };
 		2D33E8A065AC21BB6EAA7236 /* LinkifiedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkifiedText.swift; sourceTree = "<group>"; };
 		30E1EDCE6548AF0C4B1D638D /* LLM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLM.swift; sourceTree = "<group>"; };
 		4494AF1690E0705EE0D68562 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				1098985F367558826BFAE8C6 /* AccessibilityPermissionService.swift */,
+				2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */,
 				A4D5C79BE1C560104F413934 /* LaunchAtLoginService.swift */,
 				F0F0F0B185C499BD67ED8DF6 /* SettingsStore.swift */,
 				69CB755389E033CD89A2D415 /* SpeechPermissionService.swift */,
@@ -311,6 +314,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5FB7CD83A417D898C9452F0C /* APIKeyKeychain.swift in Sources */,
 				66A68094D783D17F9225961B /* AccessibilityPermissionService.swift in Sources */,
 				8848B97001CE18F09B53F8AC /* AppDelegate.swift in Sources */,
 				9D7257190BC025D33A853D4F /* AppState.swift in Sources */,

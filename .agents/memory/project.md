@@ -7,7 +7,7 @@ Voice-First KI-Assistent für macOS (Menüleiste), Push-to-talk, Diktat- und KI-
 - Swift 6, SwiftUI + AppKit (NSPopover, NSPanel)
 - macOS 15+, XcodeGen, WhisperKit 1.0
 - LLM: Claude, OpenAI, Gemini via `LLMProviding` (`processAction`, `sendChat`)
-- Persistenz: UserDefaults (Settings, API-Keys, Eigennamen)
+- Persistenz: UserDefaults (Settings, Eigennamen), Keychain (API-Keys)
 
 ## Architektur
 - `AppState` orchestriert Hotkey → STT → Diktat / KI (mit intelligentem Routing)

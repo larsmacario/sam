@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Zentraler Einstellungsspeicher: UserDefaults (API-Keys lokal, ohne Keychain).
+/// Zentraler Einstellungsspeicher: Einstellungen in UserDefaults, API-Keys in der Keychain.
 @MainActor
 final class SettingsStore: ObservableObject {
     static let shared = SettingsStore()
@@ -93,8 +93,24 @@ final class SettingsStore: ObservableObject {
     private static let properNamesKey = "properNames"
 
     private init() {
+        migrateAPIKeysFromUserDefaults()
         loadProperNames()
         refreshConfiguredProviders()
+    }
+
+    /// Einmalige Migration: API-Keys aus UserDefaults in die Keychain übernehmen und alte Einträge löschen.
+    private func migrateAPIKeysFromUserDefaults() {
+        for provider in LLMProvider.allCases {
+            let legacyKey = apiKeyDefaultsKey(provider)
+            guard let legacy = defaults.string(forKey: legacyKey)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !legacy.isEmpty else { continue }
+
+            if APIKeyKeychain.read(for: provider) == nil {
+                try? APIKeyKeychain.save(legacy, for: provider)
+            }
+            defaults.removeObject(forKey: legacyKey)
+        }
     }
 
     // MARK: - Eigennamen
@@ -179,13 +195,10 @@ final class SettingsStore: ObservableObject {
         modelID(for: selectedProvider)
     }
 
-    // MARK: - API-Key-Verwaltung (pro Provider, UserDefaults)
+    // MARK: - API-Key-Verwaltung (pro Provider, Keychain)
 
     func readAPIKey(for provider: LLMProvider) -> String? {
-        let key = defaults.string(forKey: apiKeyDefaultsKey(provider))?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let key, !key.isEmpty else { return nil }
-        return key
+        APIKeyKeychain.read(for: provider)
     }
 
     func refreshConfiguredProviders() {
@@ -200,20 +213,26 @@ final class SettingsStore: ObservableObject {
         isConfigured(selectedProvider)
     }
 
-    func saveAPIKey(_ key: String, for provider: LLMProvider) {
-        defaults.set(key.trimmingCharacters(in: .whitespacesAndNewlines), forKey: apiKeyDefaultsKey(provider))
-        refreshConfiguredProviders()
+    @discardableResult
+    func saveAPIKey(_ key: String, for provider: LLMProvider) -> Bool {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        do {
+            try APIKeyKeychain.save(trimmed, for: provider)
+            refreshConfiguredProviders()
+            return true
+        } catch {
+            return false
+        }
     }
 
     func deleteAPIKey(for provider: LLMProvider) {
+        APIKeyKeychain.delete(for: provider)
         defaults.removeObject(forKey: apiKeyDefaultsKey(provider))
         refreshConfiguredProviders()
     }
 
     func maskedAPIKeyPreview(for provider: LLMProvider) -> String {
-        guard let key = readAPIKey(for: provider), key.count > 8 else {
-            return isConfigured(provider) ? "••••••••" : ""
-        }
-        return String(key.prefix(7)) + "…" + String(key.suffix(4))
+        isConfigured(provider) ? "••••••••" : ""
     }
 }
