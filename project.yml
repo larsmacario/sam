@@ -34,6 +34,18 @@ targets:
       - path: Sam
         excludes:
           - "**/.DS_Store"
+          - Core/MeetingSessionController.swift
+          - Core/MeetingAudioPipeline.swift
+          - Core/MeetingAudioBuffer.swift
+          - Core/MeetingChunkTranscriber.swift
+          - Core/MeetingTranscriptionQueue.swift
+          - Core/MeetingWAVWriter.swift
+          - Core/ContinuousAudioRecorder.swift
+          - Core/SystemAudioCapture.swift
+          - Services/MeetingStore.swift
+          - Services/ScreenCapturePermissionService.swift
+          - Models/MeetingRecord.swift
+          - UI/MeetingStartSheet.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.larsmacario.sam
@@ -50,7 +62,6 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: Speech.framework
       - sdk: Carbon.framework
-      - sdk: ScreenCaptureKit.framework
       - package: WhisperKit
         product: WhisperKit
     entitlements:

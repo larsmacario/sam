@@ -107,16 +107,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func showStatusMenu(relativeTo button: NSStatusBarButton) {
         let menu = NSMenu()
-        if MeetingSessionController.shared.isActive {
-            let stopItem = NSMenuItem(
-                title: "Meeting beenden",
-                action: #selector(stopMeetingFromMenu),
-                keyEquivalent: ""
-            )
-            stopItem.target = self
-            menu.addItem(stopItem)
-            menu.addItem(.separator())
-        }
         let settingsItem = NSMenuItem(title: "Einstellungen…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -129,12 +119,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func openSettingsFromMenu() {
         showSettingsPanel()
-    }
-
-    @objc private func stopMeetingFromMenu() {
-        Task { @MainActor in
-            await AppState.shared.stopMeeting()
-        }
     }
 
     @objc private func quitFromMenu() {

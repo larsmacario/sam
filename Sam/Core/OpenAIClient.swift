@@ -87,25 +87,6 @@ final class OpenAIClient: LLMProviding {
         throw LLMError.invalidResponse
     }
 
-    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
-        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
-        let body = ChatRequest(
-            model: modelID,
-            messages: [
-                ChatMessage(role: "system", content: systemPrompt),
-                ChatMessage(role: "user", content: "Meeting-Transkript:\n\n\(transcript)")
-            ],
-            max_completion_tokens: 4096,
-            tools: nil,
-            tool_choice: nil
-        )
-        let response: ChatResponse = try await send(body)
-        guard let content = response.choices.first?.message.content, !content.isEmpty else {
-            throw LLMError.invalidResponse
-        }
-        return try SamMeeting.parseSummaryJSON(content)
-    }
-
     private func makeInsertTool() -> Tool {
         Tool(function: FunctionDef(
             name: SamTools.insertTextName,

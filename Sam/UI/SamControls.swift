@@ -95,7 +95,7 @@ struct Keycap: View {
 }
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case hauptseite, sprache, ki, meetings, namen
+    case hauptseite, sprache, ki, namen
 
     var id: String { rawValue }
 
@@ -104,7 +104,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .hauptseite: return "Start"
         case .sprache: return "Sprache"
         case .ki: return "KI"
-        case .meetings: return "Meetings"
         case .namen: return "Namen"
         }
     }
@@ -114,7 +113,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .hauptseite: return "house.fill"
         case .sprache: return "waveform"
         case .ki: return "sparkles"
-        case .meetings: return "person.3.fill"
         case .namen: return "person.text.rectangle"
         }
     }

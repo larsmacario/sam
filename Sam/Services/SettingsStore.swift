@@ -15,11 +15,12 @@ final class SettingsStore: ObservableObject {
     @AppStorage("whisperOnlineModel") private var whisperOnlineModelRaw: String = WhisperOnlineModel.gpt4oMiniTranscribe.rawValue
     @AppStorage("transcriptionLanguage") private var transcriptionLanguageRaw: String = TranscriptionLanguage.german.rawValue
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
-    @AppStorage("meetingAudioSource") private var meetingAudioSourceRaw: String = MeetingAudioSource.microphone.rawValue
-    @AppStorage("meetingChunkIntervalSeconds") var meetingChunkIntervalSeconds: Double = 60
-    @AppStorage("meetingOnlineFallbackAfterMinutes") var meetingOnlineFallbackAfterMinutes: Double = 45
-    @AppStorage("hasAcknowledgedMeetingRecordingNotice") var hasAcknowledgedMeetingRecordingNotice: Bool = false
-    @AppStorage("meetingStorageDirectoryPath") var meetingStorageDirectoryPath: String = ""
+    // Meeting-Einstellungen (deaktiviert, Keys bleiben für spätere Reaktivierung)
+    @AppStorage("meetingAudioSource") private var meetingAudioSourceRaw: String = "microphone"
+    @AppStorage("meetingChunkIntervalSeconds") private var meetingChunkIntervalSeconds: Double = 60
+    @AppStorage("meetingOnlineFallbackAfterMinutes") private var meetingOnlineFallbackAfterMinutes: Double = 45
+    @AppStorage("hasAcknowledgedMeetingRecordingNotice") private var hasAcknowledgedMeetingRecordingNotice: Bool = false
+    @AppStorage("meetingStorageDirectoryPath") private var meetingStorageDirectoryPath: String = ""
 
     /// Provider, deren API-Key aktuell hinterlegt ist (für reaktive UI).
     @Published var configuredProviders: Set<LLMProvider> = []
@@ -36,9 +37,12 @@ final class SettingsStore: ObservableObject {
         }
     }
 
-    /// Aktiver Eingabemodus (Diktat, KI oder Chat), umgeschaltet per fn+Option.
+    /// Aktiver Eingabemodus (Diktat oder KI), umgeschaltet per fn+Option.
     var inputMode: InputMode {
-        get { InputMode(rawValue: inputModeRaw) ?? .ai }
+        get {
+            if inputModeRaw == "meeting" || inputModeRaw == "chat" { return .ai }
+            return InputMode(rawValue: inputModeRaw) ?? .ai
+        }
         set {
             objectWillChange.send()
             inputModeRaw = newValue.rawValue
@@ -76,36 +80,6 @@ final class SettingsStore: ObservableObject {
             objectWillChange.send()
             transcriptionLanguageRaw = newValue.rawValue
         }
-    }
-
-    var meetingAudioSource: MeetingAudioSource {
-        get { MeetingAudioSource(rawValue: meetingAudioSourceRaw) ?? .microphone }
-        set {
-            objectWillChange.send()
-            meetingAudioSourceRaw = newValue.rawValue
-        }
-    }
-
-    /// Aktiver Speicherordner für Meeting-Historie (JSON-Dateien).
-    var meetingStorageDirectoryURL: URL {
-        let custom = meetingStorageDirectoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !custom.isEmpty {
-            return URL(fileURLWithPath: custom, isDirectory: true)
-        }
-        return MeetingStore.defaultStorageDirectory
-    }
-
-    var usesCustomMeetingStorageDirectory: Bool {
-        !meetingStorageDirectoryPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var meetingStorageDirectoryDisplayPath: String {
-        Self.shortenedPath(meetingStorageDirectoryURL.path)
-    }
-
-    func resetMeetingStorageDirectory() {
-        meetingStorageDirectoryPath = ""
-        objectWillChange.send()
     }
 
     static func shortenedPath(_ path: String) -> String {

@@ -3,7 +3,7 @@ import os
 
 private let logger = Logger(subsystem: "de.larsmacario.sam", category: "ChatSession")
 
-/// Verwaltet Mehrturn-Chat-Historie und KI-Aufrufe im Chat-Modus.
+/// Verwaltet Mehrturn-Chat-Historie und KI-Aufrufe im KI-Modus.
 @MainActor
 final class ChatSessionController: ObservableObject {
     static let shared = ChatSessionController()

@@ -1,21 +1,19 @@
 # Aktueller Stand
 
 ## Letzte Änderungen
-- **Meeting-Modus (4. Modus):** fn+⌥ rotiert Diktat → KI → Chat → Meeting; fn+⌘ startet/stoppt Aufnahme; Start-Dialog mit Name + Zustimmung (`KeyPanel` für Tastatureingabe).
-- **Meeting-Pille:** Größe wie Diktat-Pille; Waveform nur während aktiver Aufnahme, Idle kompakt mit Text.
-- **Meeting-Historie:** JSON-Speicher in `MeetingStore`; Speicherordner wählbar unter Einstellungen → Meetings → Historie.
-- **Release** in `/Applications/SAM.app` installiert (13.06.2026).
+- **Meeting deaktiviert:** Code im Repo, per `project.yml`-Exclude nicht im Build; Migration `meeting` → KI.
+- **KI und Chat vereint:** Nur noch 2 Modi (Diktat ↔ KI); Chat-Panel und Mehrturn-Dialog im KI-Modus mit intelligentem Routing.
+- **Release installiert:** `/Applications/SAM.app` (v1.0.0); alte Builds/Launchpad-Einträge bereinigt.
 
 ## Fokus
-- Meeting-Flow manuell testen: Moduswechsel, Name eingeben, Aufnahme, Zusammenfassung, Ordnerwahl, Historie.
+- Installierte Version in `/Applications` manuell testen (fn+⌥, Push-to-talk, Ein-Turn, Mehrturn-Chat).
 
 ## Nächste Schritte
-1. Commit & Push (Meeting-Modus, UI-Fixes, Speicherordner).
-2. Optional: bestehende Meetings beim Ordnerwechsel migrieren.
+1. Commit & Push (Meeting-Entfernung + Modus-Vereinigung).
+2. Optional: Meeting später reaktivieren.
 3. Optional Release `v1.1.0` taggen.
 
 ## Offene Punkte
 - API-Keys in UserDefaults (nicht Keychain).
 - Keine Notarisierung → Gatekeeper-Warnung für Download-Nutzer.
-- Ordnerwechsel zeigt nur Meetings im neuen Ordner (keine automatische Migration).
 - Markdown-Links, Streaming, OAuth, Keychain-Migration offen.

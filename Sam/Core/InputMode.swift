@@ -4,12 +4,8 @@ import Foundation
 enum InputMode: String, CaseIterable, Identifiable, Sendable {
     /// Sprache → Text, direkt ins aktive Feld einfügen. Kein KI-Aufruf, kein API-Key nötig.
     case dictation
-    /// Sprache → KI-Aktion am Cursor (übersetzen, schreiben, umformulieren).
+    /// Sprache oder Text → KI-Aktion am Cursor oder Mehrturn-Dialog im Chat-Fenster.
     case ai
-    /// Sprache oder Text → Mehrturn-Dialog im Chat-Fenster.
-    case chat
-    /// fn+⌘ startet/stoppt Meeting-Aufnahme mit Transkript und Zusammenfassung.
-    case meeting
 
     var id: String { rawValue }
 
@@ -17,8 +13,6 @@ enum InputMode: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dictation: return "Diktat"
         case .ai: return "KI"
-        case .chat: return "Chat"
-        case .meeting: return "Meeting"
         }
     }
 
@@ -27,17 +21,13 @@ enum InputMode: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .dictation: return "text.cursor"
         case .ai: return "sparkles"
-        case .chat: return "bubble.left.and.bubble.right"
-        case .meeting: return "person.3.fill"
         }
     }
 
     func toggled() -> InputMode {
         switch self {
         case .dictation: return .ai
-        case .ai: return .chat
-        case .chat: return .meeting
-        case .meeting: return .dictation
+        case .ai: return .dictation
         }
     }
 }

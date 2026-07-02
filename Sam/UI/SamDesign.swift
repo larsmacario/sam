@@ -256,8 +256,6 @@ extension InputMode {
         switch self {
         case .dictation: return SamDesign.dictateColor
         case .ai: return SamDesign.chatColor
-        case .chat: return SamDesign.dialogColor
-        case .meeting: return SamDesign.meetingColor
         }
     }
 
@@ -265,17 +263,13 @@ extension InputMode {
         switch self {
         case .dictation: return "mic.fill"
         case .ai: return "sparkles"
-        case .chat: return "bubble.left.and.bubble.right.fill"
-        case .meeting: return "person.3.fill"
         }
     }
 
     var pillHint: String {
         switch self {
         case .dictation: return "Sprich jetzt…"
-        case .ai: return "Aktion ausführen…"
-        case .chat: return "Chat starten…"
-        case .meeting: return "fn+⌘ zum Starten"
+        case .ai: return "Sprich oder chatte…"
         }
     }
 }

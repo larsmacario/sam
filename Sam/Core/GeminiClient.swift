@@ -81,21 +81,6 @@ final class GeminiClient: LLMProviding {
         throw LLMError.invalidResponse
     }
 
-    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
-        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
-        let body = GenerateRequest(
-            system_instruction: Content(role: nil, parts: [Part(text: systemPrompt, functionCall: nil)]),
-            contents: [Content(role: "user", parts: [Part(text: "Meeting-Transkript:\n\n\(transcript)", functionCall: nil)])],
-            tools: nil,
-            tool_config: nil
-        )
-        let response: GenerateResponse = try await send(body, modelID: modelID)
-        guard let text = response.firstText, !text.isEmpty else {
-            throw LLMError.invalidResponse
-        }
-        return try SamMeeting.parseSummaryJSON(text)
-    }
-
     private func makeInsertFunction() -> FunctionDeclaration {
         FunctionDeclaration(
             name: SamTools.insertTextName,

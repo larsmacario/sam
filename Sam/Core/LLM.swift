@@ -142,18 +142,12 @@ protocol LLMProviding: Sendable {
         modelID: String
     ) async throws -> String
 
-    /// Mehrturn-Chat (Chat-Modus).
+    /// Mehrturn-Dialog im KI-Modus.
     func sendChat(
         messages: [SamChatMessage],
         initialContext: SessionContext?,
         modelID: String
     ) async throws -> String
-
-    /// Meeting-Zusammenfassung nach Stop.
-    func summarizeMeeting(
-        transcript: String,
-        modelID: String
-    ) async throws -> MeetingSummary
 }
 
 // MARK: - Geteilte Kontext-Hilfen
@@ -230,7 +224,7 @@ enum SamTools {
     }
 }
 
-/// Chat-Modus: konversationeller Prompt und API-Payload.
+/// KI-Modus: konversationeller Prompt und API-Payload für Mehrturn-Dialog.
 enum SamChat {
     static func systemPrompt(
         assistantName: String = "SAM",
@@ -266,90 +260,6 @@ enum SamChat {
             }
             return (message.role.apiRole, message.content)
         }
-    }
-}
-
-/// Meeting-Modus: strukturierte Zusammenfassung als JSON.
-enum SamMeeting {
-    static func systemPrompt(
-        assistantName: String = "SAM",
-        userName: String = "Der Nutzer",
-        properNames: [ProperNameEntry] = []
-    ) -> String {
-        var prompt = """
-        Du bist \(assistantName), ein Meeting-Assistent auf macOS.
-        \(userName) hat ein Gespräch aufgenommen. Erstelle eine präzise Zusammenfassung auf Deutsch.
-
-        Antworte ausschließlich mit gültigem JSON (kein Markdown, keine Erklärungen) in diesem Schema:
-        {
-          "suggestedTitle": "kurzer Meeting-Titel",
-          "overview": "3-5 Sätze Gesamtzusammenfassung",
-          "topics": ["Thema 1", "Thema 2"],
-          "decisions": ["Entscheidung 1"],
-          "actionItems": [{"task": "Aufgabe", "assignee": "Person oder null", "dueDate": "Datum oder null"}],
-          "openQuestions": ["Offene Frage 1"]
-        }
-        """
-        if let block = SamTools.properNamesPromptBlock(from: properNames) {
-            prompt += "\n\n\(block)"
-        }
-        return prompt
-    }
-
-    @MainActor
-    static func resolvedSystemPrompt() -> String {
-        let settings = SettingsStore.shared
-        return systemPrompt(
-            assistantName: settings.assistantDisplayName,
-            userName: settings.userDisplayName,
-            properNames: settings.validProperNames
-        )
-    }
-
-    static func parseSummaryJSON(_ text: String) throws -> MeetingSummary {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let jsonText: String
-        if trimmed.hasPrefix("```") {
-            jsonText = trimmed
-                .replacingOccurrences(of: "```json", with: "")
-                .replacingOccurrences(of: "```", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        } else {
-            jsonText = trimmed
-        }
-        guard let data = jsonText.data(using: .utf8) else {
-            throw LLMError.invalidResponse
-        }
-        let decoded = try JSONDecoder().decode(MeetingSummaryDTO.self, from: data)
-        return decoded.toSummary()
-    }
-}
-
-private struct MeetingSummaryDTO: Decodable {
-    struct ActionItemDTO: Decodable {
-        let task: String
-        let assignee: String?
-        let dueDate: String?
-    }
-
-    let suggestedTitle: String
-    let overview: String
-    let topics: [String]
-    let decisions: [String]
-    let actionItems: [ActionItemDTO]
-    let openQuestions: [String]
-
-    func toSummary() -> MeetingSummary {
-        MeetingSummary(
-            suggestedTitle: suggestedTitle,
-            overview: overview,
-            topics: topics,
-            decisions: decisions,
-            actionItems: actionItems.map {
-                MeetingActionItem(task: $0.task, assignee: $0.assignee, dueDate: $0.dueDate)
-            },
-            openQuestions: openQuestions
-        )
     }
 }
 

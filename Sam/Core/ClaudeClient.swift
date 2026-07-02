@@ -87,23 +87,6 @@ final class ClaudeClient: LLMProviding {
         throw LLMError.invalidResponse
     }
 
-    func summarizeMeeting(transcript: String, modelID: String) async throws -> MeetingSummary {
-        let systemPrompt = await MainActor.run { SamMeeting.resolvedSystemPrompt() }
-        let body = MessagesRequest(
-            model: modelID,
-            max_tokens: 4096,
-            system: systemPrompt,
-            tools: nil,
-            tool_choice: nil,
-            messages: [Message(role: "user", content: "Meeting-Transkript:\n\n\(transcript)")]
-        )
-        let response: MessagesResponse = try await send(body)
-        guard let text = response.textContent, !text.isEmpty else {
-            throw LLMError.invalidResponse
-        }
-        return try SamMeeting.parseSummaryJSON(text)
-    }
-
     private func send<T: Decodable>(_ body: MessagesRequest) async throws -> T {
         guard await authProvider.isConfigured else {
             throw LLMError.notConfigured
