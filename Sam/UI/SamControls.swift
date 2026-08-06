@@ -95,25 +95,27 @@ struct Keycap: View {
 }
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case hauptseite, sprache, ki, namen
+    case hauptseite, lizenz, sprache, ki, woerterbuch
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .hauptseite: return "Start"
+        case .lizenz: return "Lizenz"
         case .sprache: return "Sprache"
         case .ki: return "KI"
-        case .namen: return "Namen"
+        case .woerterbuch: return "Wörterbuch"
         }
     }
 
     var systemImage: String {
         switch self {
         case .hauptseite: return "house.fill"
+        case .lizenz: return "key.fill"
         case .sprache: return "waveform"
         case .ki: return "sparkles"
-        case .namen: return "person.text.rectangle"
+        case .woerterbuch: return "person.text.rectangle"
         }
     }
 }

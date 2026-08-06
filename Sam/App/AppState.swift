@@ -47,6 +47,8 @@ final class AppState: ObservableObject {
     @Published var errorMessage: String?
     @Published var showOnboarding = false
 
+    private let licenseService = LicenseService.shared
+
     // Live-Berechtigungsstatus (vom Monitor aktualisiert → reaktive UI).
     @Published var accessibilityGranted = false
     @Published var microphoneGranted = false
@@ -66,11 +68,14 @@ final class AppState: ObservableObject {
 
     private init() {}
 
+    var isLicensed: Bool { licenseService.isLicensed }
+
     func bootstrap() {
-        showOnboarding = !settings.hasCompletedOnboarding
+        showOnboarding = !settings.hasCompletedOnboarding || !licenseService.isLicensed
         setupHotkeyCallbacks()
         refreshPermissions()
         startPermissionMonitoring()
+        Task { await licenseService.refresh() }
     }
 
     /// Pollt den Berechtigungsstatus, aktualisiert die UI live und startet den
@@ -172,6 +177,10 @@ final class AppState: ObservableObject {
             ChatSessionController.shared.reset()
         }
 
+        if mode == .ai {
+            overlay.showChat()
+        }
+
         overlay.flashMode(mode)
 
         logger.info("Eingabemodus gewechselt: \(mode.rawValue, privacy: .public)")
@@ -194,7 +203,7 @@ final class AppState: ObservableObject {
 
         status = .processing
         do {
-            let context = ChatSessionController.shared.hasActiveSession ? nil : ContextProvider.shared.capture()
+            let context = ChatSessionController.shared.hasActiveSession ? nil : await ContextProvider.shared.capture()
             try await ChatSessionController.shared.send(text: text, context: context)
             status = .idle
         } catch {
@@ -206,6 +215,13 @@ final class AppState: ObservableObject {
     private func handleHotkeyPress() async {
         guard !isSessionActive else { return }
 
+        guard licenseService.isLicensed else {
+            errorMessage = licenseService.statusMessage
+            status = .error
+            overlay.showAnswer(licenseService.statusMessage + "\n\nEinstellungen → Lizenz")
+            return
+        }
+
         if settings.inputMode == .ai && ChatSessionController.shared.isProcessing {
             return
         }
@@ -214,7 +230,7 @@ final class AppState: ObservableObject {
         errorMessage = nil
 
         if settings.inputMode == .ai {
-            aiSessionContext = ContextProvider.shared.capture()
+            aiSessionContext = await ContextProvider.shared.capture()
         }
 
         overlay.showRecording(mode: settings.inputMode)
@@ -333,7 +349,12 @@ final class AppState: ObservableObject {
             return
         }
 
-        let context = aiSessionContext ?? ContextProvider.shared.capture()
+        let context: SessionContext
+        if let cached = aiSessionContext {
+            context = cached
+        } else {
+            context = await ContextProvider.shared.capture()
+        }
         aiSessionContext = nil
 
         let hasSelection = context.selectedText.map { !$0.isEmpty } == true
@@ -377,7 +398,7 @@ final class AppState: ObservableObject {
 
         logger.info("KI-Mehrturn (neue Session): Länge=\(transcript.count)")
         do {
-            let freshContext = ContextProvider.shared.capture()
+            let freshContext = await ContextProvider.shared.capture()
             try await ChatSessionController.shared.send(text: transcript, context: freshContext)
             status = .idle
         } catch {

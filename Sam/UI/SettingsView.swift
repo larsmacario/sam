@@ -4,6 +4,7 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject var settings = SettingsStore.shared
     @ObservedObject var appState = AppState.shared
+    @ObservedObject var licenseService = LicenseService.shared
     var launchAtLoginService: LaunchAtLoginService
     var onShowOnboarding: () -> Void
     @State private var tab: SettingsTab = .hauptseite
@@ -13,6 +14,10 @@ struct SettingsView: View {
     @State private var testMessage: String?
     @State private var testIsError = false
     @State private var saveMessage: String?
+    @State private var licenseKeyInput = ""
+    @State private var licenseMessage: String?
+    @State private var licenseIsError = false
+    @State private var isActivatingLicense = false
 
     private var provider: LLMProvider { settings.selectedProvider }
 
@@ -31,9 +36,10 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     switch tab {
                     case .hauptseite: hauptseiteTab
+                    case .lizenz: lizenzTab
                     case .sprache: spracheTab
                     case .ki: kiTab
-                    case .namen: namenTab
+                    case .woerterbuch: woerterbuchTab
                     }
                 }
                 .padding(.horizontal, 18)
@@ -48,6 +54,9 @@ struct SettingsView: View {
         .tint(SamDesign.accent)
         .onAppear {
             launchAtLoginService.refresh()
+            if licenseKeyInput.isEmpty {
+                licenseKeyInput = licenseService.storedLicenseKey ?? ""
+            }
         }
         .onChange(of: tab) { _, newTab in
             if newTab == .ki { syncKiFields() }
@@ -126,6 +135,73 @@ struct SettingsView: View {
                 .fill(Color.white.opacity(SamDesign.hairlineOpacity))
                 .frame(height: 0.5)
                 .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    // MARK: - Lizenz
+
+    private var lizenzTab: some View {
+        Group {
+            SecLabel(title: "Status", systemImage: licenseService.isLicensed ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+            SamGroup {
+                SamRow(last: true) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(licenseService.statusMessage)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(licenseService.isLicensed ? SamDesign.success : .orange)
+                        if let trialEndsAt = licenseService.trialEndsAt, licenseService.status == .trialing {
+                            Text("Test endet am \(trialEndsAt.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            SecLabel(title: "Lizenzschlüssel", systemImage: "key.fill")
+            SamGroup {
+                VStack(alignment: .leading, spacing: 10) {
+                    TextField("SAM1.…", text: $licenseKeyInput)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12, design: .monospaced))
+                    HStack(spacing: 8) {
+                        Button(isActivatingLicense ? "Aktiviere…" : "Aktivieren") {
+                            Task { await activateLicense() }
+                        }
+                        .buttonStyle(GlassButtonStyle())
+                        .disabled(isActivatingLicense || licenseKeyInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        Button("Kaufen / Testen") {
+                            NSWorkspace.shared.open(LicenseConfig.purchaseURL)
+                        }
+                        .buttonStyle(GlassButtonStyle())
+                    }
+                    if let licenseMessage {
+                        Text(licenseMessage)
+                            .font(.system(size: 12))
+                            .foregroundStyle(licenseIsError ? .red : SamDesign.success)
+                    }
+                }
+                .padding(14)
+            }
+        }
+    }
+
+    private func activateLicense() async {
+        isActivatingLicense = true
+        licenseMessage = nil
+        defer { isActivatingLicense = false }
+
+        do {
+            try await licenseService.activate(licenseKey: licenseKeyInput)
+            licenseIsError = false
+            licenseMessage = "Lizenz erfolgreich aktiviert."
+            if appState.allRequiredPermissionsGranted {
+                appState.completeOnboarding()
+            }
+        } catch {
+            licenseIsError = true
+            licenseMessage = error.localizedDescription
         }
     }
 
@@ -333,9 +409,9 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Namen
+    // MARK: - Wörterbuch
 
-    private var namenTab: some View {
+    private var woerterbuchTab: some View {
         Group {
             SecLabel(title: "Eigennamen", systemImage: "person.text.rectangle")
             Text("Assistentenname, dein Name, Aussprache, Firmenname – die KI nutzt diese Begriffe in Antworten.")

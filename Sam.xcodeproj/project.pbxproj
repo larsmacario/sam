@@ -24,13 +24,16 @@
 		417853388857E2F66ACD3C42 /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4D5C79BE1C560104F413934 /* LaunchAtLoginService.swift */; };
 		43A969A779B1045E171DBBBF /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494AF1690E0705EE0D68562 /* SettingsView.swift */; };
 		4F0EC6AD8CC0699FF4A45D87 /* LLM.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E1EDCE6548AF0C4B1D638D /* LLM.swift */; };
+		549D8EFE5B6A111D1995AA0D /* LicenseKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CF61646DE84B2C57E610B60 /* LicenseKeychain.swift */; };
 		5BF14E6E05F2F58C2CF579ED /* OpenAIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099D3813F91D5306F1C779D8 /* OpenAIClient.swift */; };
 		5FB7CD83A417D898C9452F0C /* APIKeyKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */; };
+		639CA3D4A42595C672AFFDA1 /* LicenseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367D767D6D809505D11B28CF /* LicenseService.swift */; };
 		66126BDB1D0E2F765ADE41D9 /* STTEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62F24AF3FA0740BB221DE7C /* STTEngine.swift */; };
 		66A68094D783D17F9225961B /* AccessibilityPermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1098985F367558826BFAE8C6 /* AccessibilityPermissionService.swift */; };
 		7365F1F7C01BD7C0E658D2FC /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE89EEFCF12BBB275C0F191 /* OnboardingView.swift */; };
 		81753499FAA5781861AE14BF /* ContextProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F656393633CD8FC1F4279D3 /* ContextProvider.swift */; };
 		8848B97001CE18F09B53F8AC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D9DD44787250BC86128F1F /* AppDelegate.swift */; };
+		9847FBED57E9AF84855296B2 /* LicenseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC2F12165341295552D2D0B0 /* LicenseConfig.swift */; };
 		9C3B39F52C7D66C9CA62B298 /* LinkifiedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D33E8A065AC21BB6EAA7236 /* LinkifiedText.swift */; };
 		9D7257190BC025D33A853D4F /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B33A17CB19F89BCB3D2AE58 /* AppState.swift */; };
 		9DE71756D868126C1065D444 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E03C4B84B8D52B70A61067EE /* AudioRecorder.swift */; };
@@ -59,6 +62,7 @@
 		2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyKeychain.swift; sourceTree = "<group>"; };
 		2D33E8A065AC21BB6EAA7236 /* LinkifiedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkifiedText.swift; sourceTree = "<group>"; };
 		30E1EDCE6548AF0C4B1D638D /* LLM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLM.swift; sourceTree = "<group>"; };
+		367D767D6D809505D11B28CF /* LicenseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseService.swift; sourceTree = "<group>"; };
 		4494AF1690E0705EE0D68562 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		46FE3AE2BDBBAF3EBAB6E5F8 /* SamDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamDesign.swift; sourceTree = "<group>"; };
 		4A217708014EF026181712EE /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
@@ -74,6 +78,7 @@
 		728765954E00DAC204380331 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		73781B7C31FDF05411DEAB3B /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
 		760F5FEAE2A4177A03800ADA /* WhisperLocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperLocalTranscriber.swift; sourceTree = "<group>"; };
+		7CF61646DE84B2C57E610B60 /* LicenseKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseKeychain.swift; sourceTree = "<group>"; };
 		7EE852C34588C8BEC4424DFF /* GeminiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiClient.swift; sourceTree = "<group>"; };
 		80204902A27B075495CF5EE2 /* ChatSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSession.swift; sourceTree = "<group>"; };
 		825B99C7C7511222701D395C /* TranscriberFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriberFactory.swift; sourceTree = "<group>"; };
@@ -83,6 +88,7 @@
 		A69C65D0BF0E2AB8DB7C55E9 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		BD8420D6FC745D30641C332B /* ProperNameEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProperNameEntry.swift; sourceTree = "<group>"; };
 		D0D9DD44787250BC86128F1F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		DC2F12165341295552D2D0B0 /* LicenseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseConfig.swift; sourceTree = "<group>"; };
 		E03C4B84B8D52B70A61067EE /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		E060D4FA58C18F7B203DF0B1 /* AuthProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthProviding.swift; sourceTree = "<group>"; };
 		E22A4BA2F308C2FEB6CF3BA3 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
@@ -146,6 +152,9 @@
 				1098985F367558826BFAE8C6 /* AccessibilityPermissionService.swift */,
 				2CBC7544E8AD55B82C201DFF /* APIKeyKeychain.swift */,
 				A4D5C79BE1C560104F413934 /* LaunchAtLoginService.swift */,
+				DC2F12165341295552D2D0B0 /* LicenseConfig.swift */,
+				7CF61646DE84B2C57E610B60 /* LicenseKeychain.swift */,
+				367D767D6D809505D11B28CF /* LicenseService.swift */,
 				F0F0F0B185C499BD67ED8DF6 /* SettingsStore.swift */,
 				69CB755389E033CD89A2D415 /* SpeechPermissionService.swift */,
 			);
@@ -329,6 +338,9 @@
 				BB4A59545F024BE67A1A62B8 /* JSONValue.swift in Sources */,
 				4F0EC6AD8CC0699FF4A45D87 /* LLM.swift in Sources */,
 				417853388857E2F66ACD3C42 /* LaunchAtLoginService.swift in Sources */,
+				9847FBED57E9AF84855296B2 /* LicenseConfig.swift in Sources */,
+				549D8EFE5B6A111D1995AA0D /* LicenseKeychain.swift in Sources */,
+				639CA3D4A42595C672AFFDA1 /* LicenseService.swift in Sources */,
 				9C3B39F52C7D66C9CA62B298 /* LinkifiedText.swift in Sources */,
 				7365F1F7C01BD7C0E658D2FC /* OnboardingView.swift in Sources */,
 				5BF14E6E05F2F58C2CF579ED /* OpenAIClient.swift in Sources */,
@@ -431,7 +443,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.larsmacario.sam;
 				PRODUCT_NAME = SAM;
 				SDKROOT = macosx;
@@ -453,7 +465,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = de.larsmacario.sam;
 				PRODUCT_NAME = SAM;
 				SDKROOT = macosx;

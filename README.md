@@ -13,7 +13,7 @@ Du brauchst **kein Xcode**, **keinen Apple-Developer-Account** und **keine Progr
 | Brauchst du | Brauchst du nicht |
 |---|---|
 | Mac mit **macOS 15 (Sequoia)** oder neuer | Xcode |
-| Download von **GitHub Releases** | Apple Developer Account ($99/Jahr) |
+| Download von der **SAM-Website** (DMG) | Apple Developer Account ($99/Jahr) |
 | Einmalig **Rechtsklick → Öffnen** (siehe unten) | API-Key (nur für KI-Modus nötig) |
 | Optional: eigener **API-Key** für KI-Funktionen | Account beim SAM-Entwickler |
 
@@ -21,14 +21,16 @@ Du brauchst **kein Xcode**, **keinen Apple-Developer-Account** und **keine Progr
 
 ### Schritt 1: App herunterladen
 
-1. Öffne **[github.com/larsmacario/sam/releases](https://github.com/larsmacario/sam/releases)**
-2. Wähle die **neueste Version** (z. B. `v1.0.0`)
-3. Lade **`SAM.zip`** herunter
+1. Öffne die **SAM-Website** (Link unter „About" im GitHub-Repo, oder nach Deploy deine Vercel-URL – siehe [docs/WEBSITE_DEPLOY.md](docs/WEBSITE_DEPLOY.md))
+2. Klicke **„SAM für macOS herunterladen"**
+3. Du erhältst **`SAM.dmg`**
+
+> **Alternative:** [GitHub Releases](https://github.com/larsmacario/sam/releases) – dort liegt dieselbe DMG als Mirror.
 
 ### Schritt 2: Installieren
 
-1. Doppelklick auf `SAM.zip` → ZIP entpackt sich
-2. Ziehe **`SAM.app`** in den Ordner **Programme** (Finder → Programme)
+1. Doppelklick auf **`SAM.dmg`** → Disk Image öffnet sich
+2. Ziehe **`SAM.app`** auf den Ordner **Programme**
 
 > SAM sollte in **Programme** liegen – das ist wichtig für Autostart und die Bedienungshilfen-Freigabe.
 
@@ -122,7 +124,7 @@ Klicke auf das **Wellenform-Symbol** in der Menüleiste. Das Einstellungs-Panel 
 | **Start** | Status, Eingabemodus, Tastenkürzel, Berechtigungen, Autostart |
 | **Sprache** | STT-Engine, Whisper-Modell, Transkriptionssprache |
 | **KI** | Anbieter, Modell-ID, API-Key, Verbindungstest |
-| **Namen** | Eigennamen-Liste (Label + Wert) für Personalisierung |
+| **Wörterbuch** | Eigennamen-Liste (Label + Wert) für Personalisierung |
 
 **Eigennamen:** Beliebig viele Einträge mit Bezeichnung und Wert – z. B. „Assistentenname", „Dein Name", „Firmenname", „Aussprache". Der Eintrag **Assistentenname** steuert die Anzeige in Chat- und Antwort-Fenstern; **Dein Name** wird in KI-Prompts verwendet.
 
@@ -207,13 +209,15 @@ Sam/
 ## Releases erstellen (Maintainer)
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-GitHub Actions baut automatisch `SAM.zip` und hängt sie an das Release an. Details: [.github/workflows/release.yml](.github/workflows/release.yml).
+GitHub Actions baut automatisch **`SAM.dmg`**, lädt sie optional auf **Vercel Blob** hoch (Website-Download) und hängt sie an das Release an. Details: [.github/workflows/release.yml](.github/workflows/release.yml).
 
-Nach dem ersten Push: Repo-Beschreibung und Topics setzen – siehe [docs/GITHUB_SETUP.md](docs/GITHUB_SETUP.md).
+- Blob-Setup: [docs/BLOB_SETUP.md](docs/BLOB_SETUP.md)
+- Website deployen: [docs/WEBSITE_DEPLOY.md](docs/WEBSITE_DEPLOY.md)
+- Launch-Checkliste: [docs/LAUNCH.md](docs/LAUNCH.md)
 
 ## Entwickler-Hinweise
 

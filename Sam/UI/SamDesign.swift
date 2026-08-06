@@ -62,6 +62,9 @@ enum SamDesign {
         topTrailingRadius: 0,
         style: .continuous
     )
+
+    // Minimierter Chat-Float-Button
+    static let chatFloatButtonSize: CGFloat = 52
     // Cards (Control-Center-Module)
     static let cardCornerRadius: CGFloat = 14
     static let hairlineOpacity: Double = 0.06

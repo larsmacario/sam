@@ -1,23 +1,16 @@
 # Projekt: SAM
 
 ## Ziel
-Voice-First KI-Assistent für macOS (Menüleiste), Push-to-talk, Diktat- und KI-Modus. Zielgruppe: Mac-Nutzer, die diktieren, KI-Aktionen am Cursor ausführen oder im Mehrturn-Dialog arbeiten wollen.
+Voice-First-Assistent für macOS: Sprache transkribieren und je nach Modus direkt einfügen (Diktat) oder per KI bearbeiten/chatten (KI-Modus). Zielgruppe: Mac-Nutzer ohne Dev-Konto (Release via GitHub).
 
 ## Tech-Stack
-- Swift 6, SwiftUI + AppKit (NSPopover, NSPanel)
-- macOS 15+, XcodeGen, WhisperKit 1.0
-- LLM: Claude, OpenAI, Gemini via `LLMProviding` (`processAction`, `sendChat`)
-- Persistenz: UserDefaults (Settings, Eigennamen), Keychain (API-Keys)
+- **App:** Swift 6, SwiftUI + AppKit, macOS 15+; STT (Apple Speech, WhisperKit); LLM (Claude, OpenAI, Gemini); Xcode + XcodeGen
+- **Website** (`SAM Website/`): Next.js 15 App Router, Tailwind v4, `next/font` (Inter, Inter Tight, JetBrains Mono); Deployment Vercel + optional Blob für DMG
 
 ## Architektur
-- `AppState` orchestriert Hotkey → STT → Diktat / KI (mit intelligentem Routing)
-- Zwei `InputMode`: `.dictation`, `.ai` (fn+⌥ rotiert)
-- KI-Modus: Ein-Turn (`processAction`) oder Mehrturn (`sendChat` via `ChatSessionController`)
-- Meeting-Code im Repo, aktuell per Build-Exclude deaktiviert
-- UI: Settings (4 Tabs), Overlay (Pille, Chat-Panel, Antwort)
-- `LinkifiedText`: klickbare URLs im Chat
+- **App:** Menüleisten-App, `AppState` orchestriert Hotkey → STT → Routing; KI-Chat als Sidepanel; Settings in UserDefaults + Keychain
+- **Website:** Modulare Sections unter `app/components/`; cinematic Layer; Pricing mit Stripe Checkout (7-Tage-Trial, 29 € Lifetime); Lizenz-API (`/api/license/*`, `/api/stripe/webhook`)
 
 ## Entscheidungen & Constraints
-- Menüleisten-App (`LSUIElement`), kein Dock-Icon
-- SAM in `/Applications` empfohlen (Autostart, Bedienungshilfen)
-- API-Keys in UserDefaults (Keychain-Migration geplant)
+- Hotkeys: fn+⌘ (Diktat), fn+⌥ (Moduswechsel); Installationsziel `/Applications/SAM.app`
+- Website: Stripe-Einmalzahlung + signierter Lizenz-Key (Ed25519, Supabase); App-Gate ohne gültige Lizenz

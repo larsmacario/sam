@@ -1,6 +1,6 @@
 # Release-Signing und Notarisierung (Maintainer)
 
-Standard-Releases aus GitHub Actions sind **nicht signiert** (`CODE_SIGNING_ALLOWED=NO`). Nutzer sehen beim ersten Öffnen die Gatekeeper-Warnung und müssen Rechtsklick → Öffnen verwenden.
+Standard-Releases aus GitHub Actions sind **nicht signiert** (`CODE_SIGNING_ALLOWED=NO`). Nutzer sehen beim Öffnen der DMG bzw. App die Gatekeeper-Warnung und müssen Rechtsklick → Öffnen verwenden.
 
 Mit einem **Apple Developer Program**-Account ($99/Jahr) kannst du Releases signieren und notarisieren lassen.
 

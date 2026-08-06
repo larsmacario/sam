@@ -28,10 +28,10 @@ final class ContextProvider: Sendable {
     private init() {}
 
     @MainActor
-    func capture() -> SessionContext {
+    func capture() async -> SessionContext {
         let appName = NSWorkspace.shared.frontmostApplication?.localizedName
         let hasEditableInsertionPoint = detectEditableInsertionPoint()
-        let selectedText = readSelectedText(preferCopyFirst: !hasEditableInsertionPoint)
+        let selectedText = await readSelectedText(preferCopyFirst: !hasEditableInsertionPoint)
         logger.debug(
             "Kontext: App=\(appName ?? "nil", privacy: .public), Auswahl=\(selectedText?.count ?? 0) Zeichen, editierbar=\(hasEditableInsertionPoint, privacy: .public)"
         )
@@ -43,15 +43,15 @@ final class ContextProvider: Sendable {
     }
 
     @MainActor
-    private func readSelectedText(preferCopyFirst: Bool) -> String? {
+    private func readSelectedText(preferCopyFirst: Bool) async -> String? {
         guard AXIsProcessTrusted() else { return nil }
 
         if preferCopyFirst {
-            if let copied = readSelectedTextViaCopy(), !copied.isEmpty { return copied }
+            if let copied = await readSelectedTextViaCopy(), !copied.isEmpty { return copied }
             if let axText = readSelectedTextViaAccessibility(), !axText.isEmpty { return axText }
         } else {
             if let axText = readSelectedTextViaAccessibility(), !axText.isEmpty { return axText }
-            if let copied = readSelectedTextViaCopy(), !copied.isEmpty { return copied }
+            if let copied = await readSelectedTextViaCopy(), !copied.isEmpty { return copied }
         }
         return nil
     }
@@ -100,7 +100,7 @@ final class ContextProvider: Sendable {
 
     /// Fallback: Cmd+C simulieren und Pasteboard auslesen (funktioniert in Mail, Browser, Electron).
     @MainActor
-    private func readSelectedTextViaCopy() -> String? {
+    private func readSelectedTextViaCopy() async -> String? {
         let pasteboard = NSPasteboard.general
         let savedItems = savePasteboard(pasteboard)
 
@@ -112,7 +112,7 @@ final class ContextProvider: Sendable {
             return nil
         }
 
-        Thread.sleep(forTimeInterval: 0.15)
+        try? await Task.sleep(nanoseconds: 150_000_000)
 
         let copied = pasteboard.string(forType: .string)
         restorePasteboard(pasteboard, items: savedItems)

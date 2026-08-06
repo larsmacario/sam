@@ -25,9 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
 
         Task { @MainActor in
+            await LicenseService.shared.refresh()
             AppState.shared.bootstrap()
 
-            if !SettingsStore.shared.hasCompletedOnboarding {
+            if !SettingsStore.shared.hasCompletedOnboarding || !LicenseService.shared.isLicensed {
                 showOnboardingWindow()
             }
         }
@@ -42,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func applicationDidBecomeActive() {
         Task { @MainActor in
+            await LicenseService.shared.refresh()
             AppState.shared.refreshPermissions()
             if AccessibilityPermissionService.currentStatus() {
                 AppState.shared.restartHotkey()
@@ -194,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 430),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false

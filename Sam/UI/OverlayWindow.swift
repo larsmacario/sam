@@ -1,10 +1,33 @@
 import AppKit
 import SwiftUI
 
+enum ChatDisplayState {
+    case hidden
+    case minimized
+    case expanded
+}
+
+enum ChatInputChannel: String, CaseIterable, Identifiable {
+    case write
+    case speak
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .write: return "Schreiben"
+        case .speak: return "Sprechen"
+        }
+    }
+}
+
 /// Schwebendes NSPanel für Aufnahme-Pille und Antwort-Fenster.
 @MainActor
 final class OverlayWindowController: ObservableObject {
     static let shared = OverlayWindowController()
+
+    private static let floatOriginXKey = "chatFloatOriginX"
+    private static let floatOriginYKey = "chatFloatOriginY"
 
     enum PillState {
         case recording  // Aufnahme läuft
@@ -14,6 +37,7 @@ final class OverlayWindowController: ObservableObject {
     private var recordingPanel: NSPanel?
     private var answerPanel: NSPanel?
     private var chatPanel: NSPanel?
+    private var chatFloatPanel: NSPanel?
     private var flashTask: Task<Void, Never>?
 
     @Published var recordingTranscript = ""
@@ -24,10 +48,14 @@ final class OverlayWindowController: ObservableObject {
     @Published var answerText = ""
     @Published var isAnswerVisible = false
     @Published var isChatVisible = false
+    @Published private(set) var chatDisplayState: ChatDisplayState = .hidden
 
     private var insertUndoToastPanel: NSPanel?
     private var insertUndoToastTask: Task<Void, Never>?
     @Published var isInsertUndoToastVisible = false
+
+    private var workspaceObserver: NSObjectProtocol?
+    private var floatMoveObserver: NSObjectProtocol?
 
     private init() {}
 
@@ -44,7 +72,6 @@ final class OverlayWindowController: ObservableObject {
 
     func updateRecordingTranscript(_ transcript: String) {
         recordingTranscript = transcript
-        refreshRecordingContent()
     }
 
     /// Klar sichtbares Feedback nach Moduswechsel (fn+Option); blendet selbsttätig aus.
@@ -76,8 +103,6 @@ final class OverlayWindowController: ObservableObject {
                 view: RecordingPillView(controller: self),
                 hasShadow: false // Pille hat ihren eigenen runden SwiftUI-Schatten
             )
-        } else {
-            refreshRecordingContent()
         }
         positionRecordingPanel(recordingPanel)
         recordingPanel?.orderFrontRegardless()
@@ -95,8 +120,6 @@ final class OverlayWindowController: ObservableObject {
                 view: AnswerPanelView(controller: self)
             )
             installEscapeMonitor()
-        } else {
-            refreshAnswerContent()
         }
 
         positionAnswerPanel()
@@ -167,6 +190,8 @@ final class OverlayWindowController: ObservableObject {
     // MARK: - KI-Chat-Fenster
 
     func showChat() {
+        chatFloatPanel?.orderOut(nil)
+        chatDisplayState = .expanded
         isChatVisible = true
 
         if chatPanel == nil {
@@ -180,11 +205,36 @@ final class OverlayWindowController: ObservableObject {
 
         positionChatPanel()
         chatPanel?.orderFrontRegardless()
+        focusChat()
+        installAlwaysOnTopObserver()
+    }
+
+    func minimizeChat() {
+        guard chatDisplayState == .expanded else { return }
+        chatPanel?.resignKey()
+        chatPanel?.orderOut(nil)
+        isChatVisible = false
+        chatDisplayState = .minimized
+        presentChatFloatPanel()
+        installAlwaysOnTopObserver()
+    }
+
+    func restoreChat() {
+        showChat()
     }
 
     func hideChat() {
+        chatDisplayState = .hidden
         isChatVisible = false
+        chatPanel?.resignKey()
         chatPanel?.orderOut(nil)
+        chatFloatPanel?.orderOut(nil)
+    }
+
+    func focusChat() {
+        guard chatDisplayState == .expanded else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        chatPanel?.makeKey()
     }
 
     private var chatEscapeMonitor: Any?
@@ -202,27 +252,131 @@ final class OverlayWindowController: ObservableObject {
     }
 
     private func createChatPanel<V: View>(contentRect: NSRect, view: V) -> NSPanel {
-        let panel = NSPanel(
+        let panel = KeyPanel(
             contentRect: contentRect,
-            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
+            styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
+        configureOverlayPanel(panel)
         panel.hasShadow = false
-        panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = true
+        panel.becomesKeyOnlyIfNeeded = false
 
-        let hosting = PassThroughHostingView(rootView: view)
+        let hosting = PassThroughHostingView(rootView: view, onInteractiveClick: { [weak self] in
+            self?.focusChat()
+        })
         hosting.frame = NSRect(origin: .zero, size: contentRect.size)
         hosting.autoresizingMask = [.width, .height]
         panel.contentView = hosting
 
         return panel
+    }
+
+    private func presentChatFloatPanel() {
+        if chatFloatPanel == nil {
+            chatFloatPanel = createChatFloatPanel()
+            installFloatMoveObserver()
+        }
+        positionChatFloatPanel()
+        chatFloatPanel?.orderFrontRegardless()
+    }
+
+    private func createChatFloatPanel() -> NSPanel {
+        let size = SamDesign.chatFloatButtonSize
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: size, height: size),
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        configureOverlayPanel(panel)
+        panel.hasShadow = false
+        panel.isMovableByWindowBackground = true
+        panel.becomesKeyOnlyIfNeeded = true
+
+        let hosting = NSHostingView(rootView: ChatFloatButtonView(controller: self))
+        hosting.frame = NSRect(x: 0, y: 0, width: size, height: size)
+        panel.contentView = hosting
+        return panel
+    }
+
+    private func positionChatFloatPanel() {
+        guard let panel = chatFloatPanel, let screen = NSScreen.main else { return }
+        let screenFrame = screen.visibleFrame
+        let size = panel.frame.size
+        let defaults = UserDefaults.standard
+
+        if defaults.object(forKey: Self.floatOriginXKey) != nil {
+            let x = defaults.double(forKey: Self.floatOriginXKey)
+            let y = defaults.double(forKey: Self.floatOriginYKey)
+            panel.setFrameOrigin(clampedFloatOrigin(x: x, y: y, size: size, screenFrame: screenFrame))
+        } else {
+            let x = screenFrame.maxX - size.width - 24
+            let y = screenFrame.minY + 24
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        }
+    }
+
+    private func clampedFloatOrigin(x: CGFloat, y: CGFloat, size: NSSize, screenFrame: NSRect) -> NSPoint {
+        let clampedX = min(max(x, screenFrame.minX), screenFrame.maxX - size.width)
+        let clampedY = min(max(y, screenFrame.minY), screenFrame.maxY - size.height)
+        return NSPoint(x: clampedX, y: clampedY)
+    }
+
+    private func persistChatFloatOrigin() {
+        guard let panel = chatFloatPanel else { return }
+        let defaults = UserDefaults.standard
+        defaults.set(panel.frame.origin.x, forKey: Self.floatOriginXKey)
+        defaults.set(panel.frame.origin.y, forKey: Self.floatOriginYKey)
+    }
+
+    private func installFloatMoveObserver() {
+        guard floatMoveObserver == nil, let panel = chatFloatPanel else { return }
+        floatMoveObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.persistChatFloatOrigin()
+            }
+        }
+    }
+
+    private func installAlwaysOnTopObserver() {
+        guard workspaceObserver == nil else { return }
+        workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.keepChatOverlaysOnTop(resignKey: true)
+            }
+        }
+    }
+
+    private func keepChatOverlaysOnTop(resignKey: Bool) {
+        switch chatDisplayState {
+        case .expanded:
+            chatPanel?.orderFrontRegardless()
+            if resignKey {
+                chatPanel?.resignKey()
+            }
+        case .minimized:
+            chatFloatPanel?.orderFrontRegardless()
+        case .hidden:
+            break
+        }
+    }
+
+    private func configureOverlayPanel(_ panel: NSPanel) {
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hidesOnDeactivate = false
     }
 
     private func chatPanelFrame(for screen: NSScreen) -> NSRect {
@@ -296,20 +450,6 @@ final class OverlayWindowController: ObservableObject {
         panel.contentView = hosting
 
         return panel
-    }
-
-    private func refreshRecordingContent() {
-        guard let panel = recordingPanel else { return }
-        let hosting = NSHostingView(rootView: RecordingPillView(controller: self))
-        hosting.frame = panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 420, height: 72)
-        panel.contentView = hosting
-    }
-
-    private func refreshAnswerContent() {
-        guard let panel = answerPanel else { return }
-        let hosting = NSHostingView(rootView: AnswerPanelView(controller: self))
-        hosting.frame = panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 460, height: 340)
-        panel.contentView = hosting
     }
 
     private func positionRecordingPanel(_ panel: NSPanel? = nil) {
@@ -575,7 +715,9 @@ struct ChatPanelView: View {
     @ObservedObject private var chat = ChatSessionController.shared
     @ObservedObject private var appState = AppState.shared
     @ObservedObject private var settings = SettingsStore.shared
+    @ObservedObject private var overlay = OverlayWindowController.shared
     @State private var draft = ""
+    @State private var inputChannel: ChatInputChannel = .write
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -592,7 +734,20 @@ struct ChatPanelView: View {
                     .padding(.trailing, SamDesign.chatPanelScreenInset)
             }
         }
-        .onAppear { isInputFocused = true }
+        .onAppear {
+            if inputChannel == .write {
+                isInputFocused = true
+                overlay.focusChat()
+            }
+        }
+        .onChange(of: inputChannel) { _, channel in
+            if channel == .write {
+                isInputFocused = true
+                overlay.focusChat()
+            } else {
+                isInputFocused = false
+            }
+        }
     }
 
     private var chatCard: some View {
@@ -603,6 +758,9 @@ struct ChatPanelView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
+                        if chat.messages.isEmpty && !chat.isProcessing {
+                            emptyChatHint
+                        }
                         ForEach(chat.messages) { message in
                             ChatBubbleView(message: message)
                                 .id(message.id)
@@ -643,6 +801,30 @@ struct ChatPanelView: View {
                 .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.28), radius: 24, x: -8, y: 0)
+        .contentShape(SamDesign.chatPanelShape)
+        .onTapGesture {
+            overlay.focusChat()
+            if inputChannel == .write {
+                isInputFocused = true
+            }
+        }
+        // Der Glas-Hintergrund (.hudWindow) ist immer dunkel – ohne erzwungenes
+        // dunkles ColorScheme rendern Text & Textcursor im hellen System-Modus
+        // schwarz auf schwarz und sind praktisch unsichtbar (z. B. im Schreibfeld).
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var emptyChatHint: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Wie kann ich helfen?")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.primary)
+            Text("Schreib eine Nachricht oder halte fn + ⌘ zum Sprechen.")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
     }
 
     private var chatHeader: some View {
@@ -663,6 +845,16 @@ struct ChatPanelView: View {
             }
             .buttonStyle(.plain)
             Button {
+                overlay.minimizeChat()
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 22)
+                    .background(Color.primary.opacity(0.08), in: Circle())
+            }
+            .buttonStyle(.plain)
+            Button {
                 appState.closeChatSession()
             } label: {
                 Image(systemName: "xmark")
@@ -678,35 +870,69 @@ struct ChatPanelView: View {
     }
 
     private var chatFooter: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                TextField("Nachricht schreiben…", text: $draft, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .lineLimit(1...4)
-                    .focused($isInputFocused)
-                    .glassInsetField()
-                    .onSubmit { sendDraft() }
-
-                Button(action: sendDraft) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(canSend ? SamDesign.dialogColor : .secondary.opacity(0.4))
+        VStack(spacing: 10) {
+            Picker("", selection: $inputChannel) {
+                ForEach(ChatInputChannel.allCases) { channel in
+                    Text(channel.label).tag(channel)
                 }
-                .buttonStyle(.plain)
-                .disabled(!canSend)
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
 
-            HStack(spacing: 5) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 10))
-                Text("fn + ⌘ zum Sprechen")
-                    .font(.system(size: 11))
+            if inputChannel == .write {
+                HStack(spacing: 8) {
+                    TextField("Nachricht schreiben…", text: $draft, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .lineLimit(1...4)
+                        .focused($isInputFocused)
+                        .glassInsetField()
+                        .onSubmit { sendDraft() }
+
+                    Button(action: sendDraft) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(canSend ? SamDesign.dialogColor : .secondary.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSend)
+                }
+            } else {
+                speakPrompt
             }
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    private var speakPrompt: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(SamDesign.chatColor.opacity(0.18))
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SamDesign.chatColor)
+            }
+            .frame(width: 36, height: 36)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("fn + ⌘ halten zum Sprechen")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text("Loslassen sendet die Nachricht")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            WaveformView(color: SamDesign.chatColor, barCount: 12, maxHeight: 18)
+                .frame(width: 72)
+                .opacity(0.85)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var canSend: Bool {
@@ -810,6 +1036,30 @@ private struct ChatLoadingBubble: View {
     }
 }
 
+/// Minimierter Chat – schwebender Wiederherstellen-Button.
+struct ChatFloatButtonView: View {
+    @ObservedObject var controller: OverlayWindowController
+
+    var body: some View {
+        Button {
+            controller.restoreChat()
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(SamDesign.chatColor)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: SamDesign.chatFloatButtonSize, height: SamDesign.chatFloatButtonSize)
+            .shadow(color: SamDesign.chatColor.opacity(0.45), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+        .help("Chat wiederherstellen")
+    }
+}
+
 /// Volle Bildschirmbreite mit Klick-Durchreichung links vom Chat-Panel.
 /// Panel das Tastatureingabe akzeptiert (z. B. TextField im Start-Dialog).
 private final class KeyPanel: NSPanel {
@@ -818,6 +1068,24 @@ private final class KeyPanel: NSPanel {
 }
 
 private final class PassThroughHostingView<Content: View>: NSHostingView<Content> {
+    private let onInteractiveClick: (() -> Void)?
+    private var mouseDownPoint: NSPoint?
+
+    init(rootView: Content, onInteractiveClick: (() -> Void)? = nil) {
+        self.onInteractiveClick = onInteractiveClick
+        super.init(rootView: rootView)
+    }
+
+    @MainActor @preconcurrency required dynamic init?(coder: NSCoder) {
+        self.onInteractiveClick = nil
+        super.init(coder: coder)
+    }
+
+    @MainActor @preconcurrency required dynamic init(rootView: Content) {
+        self.onInteractiveClick = nil
+        super.init(rootView: rootView)
+    }
+
     private var interactiveTrailingWidth: CGFloat {
         SamDesign.chatPanelWidth + SamDesign.chatPanelScreenInset
     }
@@ -827,5 +1095,22 @@ private final class PassThroughHostingView<Content: View>: NSHostingView<Content
             return nil
         }
         return super.hitTest(point)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        mouseDownPoint = convert(event.locationInWindow, from: nil)
+        super.mouseDown(with: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer { mouseDownPoint = nil }
+        if let start = mouseDownPoint {
+            let end = convert(event.locationInWindow, from: nil)
+            let distance = hypot(end.x - start.x, end.y - start.y)
+            if distance < 4, end.x >= bounds.width - interactiveTrailingWidth {
+                onInteractiveClick?()
+            }
+        }
+        super.mouseUp(with: event)
     }
 }

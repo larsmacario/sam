@@ -13,6 +13,7 @@ jobs:
     runs-on: macos-15
     env:
       SIGN_RELEASE: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+      UPLOAD_BLOB: ${{ secrets.BLOB_READ_WRITE_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,17 +65,16 @@ jobs:
             CODE_SIGN_IDENTITY="Developer ID Application" \
             build
 
-      - name: Package SAM.app
+      - name: Package SAM.dmg
         run: |
           APP_PATH="DerivedData/Build/Products/Release/SAM.app"
           if [ ! -d "$APP_PATH" ]; then
             echo "SAM.app not found at $APP_PATH"
             exit 1
           fi
-          mkdir -p dist
-          ditto "$APP_PATH" dist/SAM.app
-          cd dist && zip -r ../SAM.zip SAM.app
-          ls -la ../SAM.zip
+          chmod +x Scripts/create-dmg.sh
+          ./Scripts/create-dmg.sh "$APP_PATH" SAM.dmg
+          ls -la SAM.dmg
 
       - name: Notarize release
         if: env.SIGN_RELEASE == 'true'
@@ -83,16 +83,31 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcrun notarytool submit SAM.zip \
+          xcrun notarytool submit SAM.dmg \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
-          xcrun stapler staple dist/SAM.app
-          cd dist && zip -r ../SAM.zip SAM.app
+          xcrun stapler staple SAM.dmg
+
+      - name: Setup Node
+        if: env.UPLOAD_BLOB == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Upload to Vercel Blob
+        if: env.UPLOAD_BLOB == 'true'
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          cd website && npm ci
+          node scripts/upload-release-to-blob.mjs ../SAM.dmg "${GITHUB_REF_NAME#v}"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: SAM.zip
+          files: SAM.dmg
           generate_release_notes: true

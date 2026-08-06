@@ -18,21 +18,31 @@ git push -u origin main
 
 Unter **Settings → General** oder auf der Repo-Startseite:
 
-- **Description:** `Voice-First KI-Assistent für macOS`
-- **Website:** Link zur README oder Releases-Seite
+- **Description:** `Voice-First KI-Assistent für macOS – Open Source`
+- **Website:** URL der Vercel-Landingpage (siehe [WEBSITE_DEPLOY.md](WEBSITE_DEPLOY.md))
 - **Topics:** `macos`, `swift`, `swiftui`, `voice`, `dictation`, `whisper`, `claude`, `openai`, `gemini`, `menubar`, `assistant`
 
-## Erstes Release
+## GitHub Discussions
+
+Unter **Settings → General → Features** → **Discussions** aktivieren.
+
+Nutzer-Feedback und Support dort sammeln; Issues für Bugs behalten.
+
+## Release
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-Der Workflow [.github/workflows/release.yml](../.github/workflows/release.yml) baut `SAM.zip` und veröffentlicht sie automatisch unter **Releases**.
+Der Workflow [.github/workflows/release.yml](../.github/workflows/release.yml) baut **`SAM.dmg`**, lädt optional auf Vercel Blob hoch und veröffentlicht die DMG unter **Releases**.
 
-Prüfe nach dem Workflow-Lauf, ob das Release die ZIP-Datei enthält.
+Voraussetzung Blob-Upload: Secret `BLOB_READ_WRITE_TOKEN` – siehe [BLOB_SETUP.md](BLOB_SETUP.md).
 
-## README-Links anpassen
+## README-Links
 
 Repository-URL: https://github.com/larsmacario/sam
+
+Website-Deploy: [WEBSITE_DEPLOY.md](WEBSITE_DEPLOY.md)
+
+Launch: [LAUNCH.md](LAUNCH.md)

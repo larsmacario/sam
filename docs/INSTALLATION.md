@@ -14,14 +14,16 @@ Diese Anleitung richtet sich an Nutzer **ohne Programmierkenntnisse**. Du brauch
 
 ### Schritt 1: App herunterladen
 
-1. Öffne **[github.com/larsmacario/sam/releases](https://github.com/larsmacario/sam/releases)**.
-2. Wähle die **neueste Version** (z. B. `v1.0.0`).
-3. Lade die Datei **`SAM.zip`** herunter.
+1. Öffne die **SAM-Website** (Link im GitHub-Repo unter „About" → Website).
+2. Klicke **„SAM für macOS herunterladen"**.
+3. Du erhältst **`SAM.dmg`**.
+
+> **Alternative:** [GitHub Releases](https://github.com/larsmacario/sam/releases) – DMG-Mirror.
 
 ### Schritt 2: App installieren
 
-1. Öffne die heruntergeladene ZIP-Datei (Doppelklick).
-2. Ziehe **`SAM.app`** in den Ordner **Programme** (Finder → Programme).
+1. Doppelklick auf **`SAM.dmg`**.
+2. Ziehe **`SAM.app`** auf den Ordner **Programme**.
 
 > **Tipp:** SAM sollte in **Programme** liegen, damit „Beim Anmelden starten" und die Bedienungshilfen-Freigabe zuverlässig funktionieren.
 
@@ -75,7 +77,7 @@ Klicke auf das **SAM-Symbol** in der Menüleiste. Das Panel hat vier Tabs:
 | **Start** | Autostart, aktiver Modus, Tastenkürzel, Berechtigungen |
 | **Sprache** | Spracherkennungs-Engine und Transkriptionssprache |
 | **KI** | Anbieter, Modell und API-Key |
-| **Namen** | Eigennamen für Personalisierung |
+| **Wörterbuch** | Eigennamen für Personalisierung |
 
 ## KI-Modus einrichten (optional)
 
@@ -99,7 +101,7 @@ API-Keys erhältst du bei den Anbietern:
 
 ## Eigennamen anpassen (optional)
 
-Unter Tab **Namen** kannst du beliebige Einträge mit Bezeichnung und Wert anlegen:
+Unter Tab **Wörterbuch** kannst du beliebige Einträge mit Bezeichnung und Wert anlegen:
 
 - **Assistentenname** – Name in Chat- und Antwort-Fenstern (Standard: SAM)
 - **Dein Name** – wie die KI dich anspricht
